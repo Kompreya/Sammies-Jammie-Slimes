@@ -1,0 +1,15 @@
+{
+    "parent": "item/generated",
+    "textures": {
+        "layer0": "sammiejamslimes:spawn_egg_primary",
+        "layer1": "sammiejamslimes:spawn_egg_secondary"
+    },
+    "overrides": [
+        {
+            "predicate": {
+                "custom_model_data": 1
+            },
+            "model": "item/spawn_egg_tinted"
+        }
+    ]
+}
