@@ -12,6 +12,8 @@ public class JSONFileLoader {
     private static final Gson gson = new Gson();
     private static final JsonParser jsonParser = new JsonParser();
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
+    private static final String FALLBACK_PRIMARY_COLOR = "FF0000";
+    private static final String FALLBACK_SECONDARY_COLOR = "00FF00";
 
     // SoC: Parsing and validating slimes.json before storing in SammieJamSlimeData
     // Here we perform a grand manner of validation checks on slimes.json.
@@ -42,6 +44,8 @@ public class JSONFileLoader {
                     JsonElement jsonElement = jsonParser.parse(line);
 
                     if (jsonElement.isJsonObject()) {
+
+                        // BEGIN entityID validation
                         // Check if the JSON object has an "entityID" property
                         JsonObject jsonObject = jsonElement.getAsJsonObject();
                         JsonElement entityIDElement = jsonObject.get("entityID");
@@ -55,11 +59,12 @@ public class JSONFileLoader {
                                 continue; // Skip invalid entityID
                             }
                         } else {
-                            currentEntityID = null;
                             LOGGER.warn("Line {}: JSON object missing or has an invalid 'entityID' property. Skipping.", lineNumber);
                             continue;
                         }
+                        // END entityID validation
 
+                        // BEGIN displayName validation
                         // Check if the JSON object has a "displayName" property
                         JsonElement displayNameElement = jsonObject.get("displayName");
 
@@ -71,7 +76,40 @@ public class JSONFileLoader {
                             }
                         } else {
                             LOGGER.warn("Line {}: 'displayName' property missing or invalid for '{}'. Using as-is.", lineNumber, currentEntityID);
+                            continue;
                         }
+                        // END displayName validation
+
+                        // BEGIN spawnEggColors validation
+                        // Check if the JSON object has a "spawnEggColors" property
+                        JsonElement spawnEggColorsElement = jsonObject.get("spawnEggColors");
+
+                        if (spawnEggColorsElement != null && spawnEggColorsElement.isJsonObject()) {
+                            JsonObject spawnEggColorsJson = spawnEggColorsElement.getAsJsonObject();
+                            JsonElement primaryElement = spawnEggColorsJson.get("primary");
+                            JsonElement secondaryElement = spawnEggColorsJson.get("secondary");
+
+                            if (primaryElement != null && secondaryElement != null &&
+                                    primaryElement.isJsonPrimitive() && secondaryElement.isJsonPrimitive()) {
+                                String primaryColor = primaryElement.getAsString();
+                                String secondaryColor = secondaryElement.getAsString();
+
+                                // Validate primary and secondary colors
+                                if (!isValidColor(primaryColor) || !isValidColor(secondaryColor)) {
+                                    LOGGER.warn("Line {}: Invalid spawnEggColors format for '{}'. Using fallback colors.", lineNumber, currentEntityID);
+                                    // Use fallback colors here
+                                    primaryColor = FALLBACK_PRIMARY_COLOR;
+                                    secondaryColor = FALLBACK_SECONDARY_COLOR;
+                                }
+                            }
+                        } else {
+                            LOGGER.warn("Line {}: 'spawnEggColors' property missing or invalid for '{}'. Using fallback colors.", lineNumber, currentEntityID);
+                            // Use fallback colors here
+                            String primaryColor = FALLBACK_PRIMARY_COLOR;
+                            String secondaryColor = FALLBACK_SECONDARY_COLOR;
+                            continue;
+                        }
+                        // END spawnEggColors validation
 
                         jsonArray.add(jsonObject);
                     } else {
@@ -149,6 +187,23 @@ public class JSONFileLoader {
 
         // If the displayName has passed all checks, consider it valid
         return true;
+    }
+
+    // Validate spawnEggColor data
+    private static boolean isValidColor(String color) {
+        if (color != null) {
+            // Remove "0x" or "#" prefixes if present
+            color = color.replace("0x", "").replace("#", "");
+
+            // If the length is now 6, assume full opacity (FF)
+            if (color.length() == 6) {
+                color = "FF" + color;
+            }
+
+            // Check if the modified color matches the desired format
+            return color.matches("^([A-Fa-f0-9]{8})$");
+        }
+        return false;
     }
 
 }
