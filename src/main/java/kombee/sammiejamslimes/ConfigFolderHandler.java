@@ -27,24 +27,36 @@ public class ConfigFolderHandler {
             texturesFolder.mkdirs();
 
             LOGGER.info("Copying slimes.json from resources to: {}", new File(configDir, "slimes.json").getAbsolutePath());
-            // Copy the JSON file from your mod's resources
-            copyResourceToFile("/assets/sammiejamslimes/slimes.json", new File(configDir, "slimes.json"));
+
+            // Pass true to loadDefaultOnFail
+            SammieJamSlimeData[] loadedData = JSONFileLoader.loadSlimeData("config/sammiejamslimes/slimes.json", true);
+
+            // Check if the loaded data is null or empty (indicating a failure)
+            if (loadedData == null || loadedData.length == 0) {
+                LOGGER.error("Failed to generate default slimes.json file in config/sammiejamslimes, loading defaults. Please check your system.");
+                // Continue with loading the default data
+            } else {
+                // Data loaded successfully
+                LOGGER.info("Loaded custom SammieJamSlime data from config.");
+            }
 
             LOGGER.info("Copying melonslime.png from resources to: {}", new File(texturesFolder, "melonslime.png").getAbsolutePath());
-            // Copy additional texture files (adjust paths as needed)
             copyResourceToFile("/assets/sammiejamslimes/textures/entity/melonslime.png", new File(texturesFolder, "melonslime.png"));
             LOGGER.info("Copying diamondslime.png from resources to: {}", new File(texturesFolder, "diamondslime.png").getAbsolutePath());
             copyResourceToFile("/assets/sammiejamslimes/textures/entity/diamondslime.png", new File(texturesFolder, "diamondslime.png"));
         }
     }
 
-    private static void copyResourceToFile(String resourceName, File targetFile) {
+
+    private static boolean copyResourceToFile(String resourceName, File targetFile) {
         try (InputStream resourceStream = ConfigFolderHandler.class.getResourceAsStream(resourceName)) {
             if (resourceStream != null) {
                 FileUtils.copyInputStreamToFile(resourceStream, targetFile);
+                return true; // Return true if the copy was successful
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return false; // Return false if the copy failed
     }
 }

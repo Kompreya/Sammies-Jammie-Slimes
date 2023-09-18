@@ -18,7 +18,7 @@ public class CommonProxy {
 
     public void init() {
         LOGGER.info("Calling init in CommonProxy");
-        SammieJamSlimeData[] slimeDataArray = JSONFileLoader.loadSlimeData("config/sammiejamslimes/slimes.json");
+        SammieJamSlimeData[] slimeDataArray = JSONFileLoader.loadSlimeData("config/sammiejamslimes/slimes.json", true);
 
         if (slimeDataArray != null) {
             LOGGER.info("Loaded SammieJamSlime data:");
@@ -29,7 +29,11 @@ public class CommonProxy {
                 // Add more logging as needed for data inspection
             }
         } else {
-            LOGGER.warn("Failed to load SammieJamSlime data");
+            LOGGER.warn("Failed to load SammieJamSlime data. This may be due to one of the following reasons:\n"
+                    + "1. The 'slimes.json' file is missing or incorrectly located in 'config/sammiejamslimes'.\n"
+                    + "2. The 'slimes.json' file is empty or contains invalid JSON data.\n"
+                    + "3. There was an I/O error while attempting to load the file.\n"
+                    + "Please check your mod's configuration and ensure the 'slimes.json' file is properly formatted and located.");
         }
     }
     public void postInit() {
