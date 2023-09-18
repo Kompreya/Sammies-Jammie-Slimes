@@ -16,6 +16,7 @@ public class SammieJamSlimeData {
     private TransformTo transformTo;
     private boolean spawningEnable;
     private boolean entityIDError = false;
+    private boolean displayNameError = false;
 
     // Getters and Setters for slime data
     public String getEntityID() {
@@ -35,6 +36,17 @@ public class SammieJamSlimeData {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        // Validate displayName to ensure it's not empty
+        if (displayName != null && !displayName.isEmpty()) {
+            this.displayName = displayName;
+            displayNameError = false; // Reset the error flag if valid
+        } else {
+            displayNameError = true; // Set the error flag if empty
+            LOGGER.warn("displayName is empty. Using unlocalized name. Set displayName in slimes.json or in your localization file.");
+        }
     }
 
     public SpawnEggColors getSpawnEggColors() {
@@ -118,6 +130,10 @@ public class SammieJamSlimeData {
 
     public boolean hasEntityIDError() {
         return entityIDError;
+    }
+
+    public boolean hasDisplayNameError() {
+        return displayNameError;
     }
     private boolean isValidEntityID(String entityID) {
         // Check if the entityID is not null and not empty

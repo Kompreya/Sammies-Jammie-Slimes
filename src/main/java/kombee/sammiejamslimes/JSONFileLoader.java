@@ -42,7 +42,7 @@ public class JSONFileLoader {
 
                     // Check for duplicate entityID
                     if (!encounteredEntityIDs.add(slimeData.getEntityID())) {
-                        LOGGER.error("Duplicate entityID found in slimes.json: {}", slimeData.getEntityID());
+                        LOGGER.error("Duplicate entityID found in slimes.json: {}. Will not be registered. Ensure entityID values are unique.", slimeData.getEntityID());
                     }
 
                     // Add the slimeData object to your array
