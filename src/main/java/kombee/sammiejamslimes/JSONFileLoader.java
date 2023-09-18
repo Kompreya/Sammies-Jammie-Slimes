@@ -26,6 +26,7 @@ public class JSONFileLoader {
             String line;
             int lineNumber = 0;
             String currentEntityID = null; // Track the current entityID. We do this, so we can associate properties to entityID, as entityID is required for each slime object.
+            String currentDisplayName = null; // Track the current displayName
 
             // Track line number for use in logging.
             while ((line = reader.readLine()) != null) {
@@ -59,6 +60,19 @@ public class JSONFileLoader {
                             continue;
                         }
 
+                        // Check if the JSON object has a "displayName" property
+                        JsonElement displayNameElement = jsonObject.get("displayName");
+
+                        if (displayNameElement != null && displayNameElement.isJsonPrimitive() && displayNameElement.getAsString() != null) {
+                            currentDisplayName = displayNameElement.getAsString();
+                            // Validate the displayName here
+                            if (!isValidDisplayName(currentDisplayName)) {
+                                LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Using as-is.", lineNumber, currentEntityID, currentDisplayName);
+                            }
+                        } else {
+                            LOGGER.warn("Line {}: 'displayName' property missing or invalid for '{}'. Using as-is.", lineNumber, currentEntityID);
+                        }
+
                         jsonArray.add(jsonObject);
                     } else {
                         LOGGER.warn("Line {}: Ignored invalid JSON data: {}", lineNumber, line);
@@ -73,11 +87,6 @@ public class JSONFileLoader {
             int i = 0;
             for (JsonElement element : jsonArray) {
                 SammieJamSlimeData slimeData = gson.fromJson(element, SammieJamSlimeData.class);
-
-                // Check if the entityID property has an error and log it
-                if (slimeData.hasEntityIDError()) {
-                    LOGGER.error("EntityID validation error for '{}': {}", slimeData.getEntityID(), element);
-                }
 
                 // Add the slimeData object to your array
                 slimeDataArray[i] = slimeData;
@@ -120,4 +129,26 @@ public class JSONFileLoader {
             return false;
         }
     }
+
+    // Validate displayName format
+    // TODO: Check for caveats with localized name formatting. Generally, any formatting is acceptable, but let's warn users for caveats.
+    // For now, we're just sanitizing values containing only whitespace, which then reverts back to the unlocalized name. Unlocalized names will still get added to en_us.lang in the resources folder to each entity.
+    private static boolean isValidDisplayName(String displayName) {
+        // Check if the displayName is not null
+        if (displayName == null) {
+            return false;
+        }
+
+        // Sanitize spaces by removing them
+        String sanitizedDisplayName = displayName.replaceAll("\\s", "");
+
+        // Check if the sanitized displayName is empty
+        if (sanitizedDisplayName.isEmpty()) {
+            return false; // Treat it as missing
+        }
+
+        // If the displayName has passed all checks, consider it valid
+        return true;
+    }
+
 }

@@ -154,6 +154,8 @@ public class SammieJamSlimeData {
 
     //Invalid formatting and data type handling
 
+
+    // Unused, leftover from validation move to jsonfileloader. Maybe usable later, unsure.
     public boolean hasEntityIDError() {
         return entityIDError;
     }

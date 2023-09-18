@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+// TODO: Provide slimes.json documentation. Serve this to end-user's config folder from mod resources, allow safe deletion and link to wiki.
 public class ConfigFolderHandler {
 
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
