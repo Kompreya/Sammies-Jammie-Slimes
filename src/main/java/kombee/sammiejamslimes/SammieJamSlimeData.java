@@ -57,6 +57,7 @@ public class SammieJamSlimeData {
         return spawnEggColors;
     }
 
+    /*
     public void setSpawnEggColors(JsonObject spawnEggColorsJson) {
         // Validate the spawnEggColorsJson object
         if (isValidSpawnEggColorsJson(spawnEggColorsJson)) {
@@ -69,6 +70,15 @@ public class SammieJamSlimeData {
             // Set default colors or handle the error as needed
             this.spawnEggColors = new SpawnEggColors("FF0000", "00FF00");
         }
+    }
+    */
+    public void setSpawnEggColors(SpawnEggColors spawnEggColors) {
+        this.spawnEggColors = spawnEggColors;
+    }
+
+
+    public void setTransformItems(List<TransformItem> transformItems) {
+        this.transformItems = transformItems;
     }
 
 
@@ -113,18 +123,26 @@ public class SammieJamSlimeData {
         private boolean consumeItem;
         private boolean reduceDurability;
 
+        // This is how each property in a given transformItem object is associated with each other
+        public TransformItem(String itemID, boolean consumeItem, boolean reduceDurability) {
+            this.itemID = itemID;
+            this.consumeItem = consumeItem;
+            this.reduceDurability = reduceDurability;
+        }
+
         public String getItemID() {
             return itemID;
         }
 
-        public boolean shouldConsumeItem() {
+        public boolean isConsumeItem() {
             return consumeItem;
         }
 
-        public boolean shouldReduceDurability() {
+        public boolean isReduceDurability() {
             return reduceDurability;
         }
     }
+
 
     public static class Appearance {
         private String type;
