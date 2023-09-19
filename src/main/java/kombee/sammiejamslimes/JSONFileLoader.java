@@ -1,7 +1,7 @@
 package kombee.sammiejamslimes;
 
-import kombee.sammiejamslimes.SammieJamSlimeData;
 import com.google.gson.*;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,12 +11,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraft.item.Item;
+import net.minecraft.util.ResourceLocation;
+
 public class JSONFileLoader {
     private static final Gson gson = new Gson();
     private static final JsonParser jsonParser = new JsonParser();
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
     private static final String FALLBACK_PRIMARY_COLOR = "FF0000";
     private static final String FALLBACK_SECONDARY_COLOR = "00FF00";
+    private static final Boolean FALLBACK_CONSUME_ITEM = true;
+    private static final Boolean FALLBACK_REDUCE_DURABILITY = false;
 
     // SoC: Parsing and validating slimes.json before storing in SammieJamSlimeData
     // Here we perform a grand manner of validation checks on slimes.json.
@@ -24,10 +30,19 @@ public class JSONFileLoader {
     // Soft accept some values, sanitize as needed, validate and store.
     // Prevent crashes when possible. Provide fallbacks. Throw warnings indicating fallback used.
     public static SammieJamSlimeData[] loadSlimeData(String filePath, boolean loadDefaultOnFail) {
+        // Declare a set to track encountered entityIDs
         Set<String> encounteredEntityIDs = new HashSet<>();
-        String currentEntityID = null; // Declare currentEntityID at a higher scope
+
+        // Declare a list to collect SammieJamSlimeData objects
+        List<SammieJamSlimeData> slimeDataList = new ArrayList<>();
+
+        // Initialize other variables you may need here
+        SammieJamSlimeData slimeData = null;
+
+        JsonArray jsonArray = new JsonArray(); // Initialize jsonArray
+
+
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            JsonArray jsonArray = new JsonArray();
             String line;
             int lineNumber = 0;
 
@@ -48,96 +63,27 @@ public class JSONFileLoader {
                     if (jsonElement.isJsonObject()) {
                         JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-                        //<editor-fold desc="entityID parse and validate">
-                        // BEGIN entityID validation
-                        // Check if the JSON object has an "entityID" property
-                        JsonElement entityIDElement = jsonObject.get("entityID");
+                        // Handle entityID property
+                        String currentEntityID = handleEntityID(jsonObject, lineNumber);
 
-                        if (entityIDElement != null && entityIDElement.isJsonPrimitive() && entityIDElement.getAsString() != null) {
-                            currentEntityID = entityIDElement.getAsString();
-
-                            // Validate the entityID format
-                            if (!isValidEntityID(currentEntityID)) {
-                                LOGGER.error("Line {}: Invalid entityID format for '{}': {}. Skipping.", lineNumber, currentEntityID, line);
-                                continue; // Skip invalid entityID
-                            }
-                        } else {
-                            LOGGER.warn("Line {}: JSON object missing or has an invalid 'entityID' property. Skipping.", lineNumber);
+                        if (currentEntityID == null) {
+                            // Invalid or missing entityID, skip this object
                             continue;
                         }
-                        // END entityID validation
-                        //</editor-fold>
 
-                        //<editor-fold desc="displayName parse and validate">
-                        // BEGIN displayName validation
-                        // Check if the JSON object has a "displayName" property
-                        JsonElement displayNameElement = jsonObject.get("displayName");
+                        // Handle displayName property
+                        String currentDisplayName = handleDisplayName(jsonObject, lineNumber, currentEntityID);
 
-                        String currentDisplayName = null;
-                        if (displayNameElement != null && displayNameElement.isJsonPrimitive() && displayNameElement.getAsString() != null) {
-                            currentDisplayName = displayNameElement.getAsString();
-                            // Validate the displayName here
-                            if (!isValidDisplayName(currentDisplayName)) {
-                                LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Using as-is.", lineNumber, currentEntityID, currentDisplayName);
-                            }
-                        } else {
-                            LOGGER.warn("Line {}: 'displayName' property missing or invalid for '{}'. Using as-is.", lineNumber, currentEntityID);
+                        // Handle spawnEggColors property
+                        handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, slimeData);
+
+                        // Handle transformItems property
+                        handleTransformItems(jsonObject, lineNumber, currentEntityID, jsonArray);
+
+                        // Create a new SammieJamSlimeData instance if needed
+                        if (slimeData != null) {
+                            slimeDataList.add(slimeData);
                         }
-                        // END displayName validation
-                        //</editor-fold>
-
-                        //<editor-fold desc="spawnEggColors parse and validate">
-                        // BEGIN spawnEggColors validation
-                        String primaryColor = FALLBACK_PRIMARY_COLOR;
-                        String secondaryColor = FALLBACK_SECONDARY_COLOR;
-
-                        // Check if the JSON object has a "spawnEggColors" property
-                        JsonElement spawnEggColorsElement = jsonObject.get("spawnEggColors");
-
-                        if (spawnEggColorsElement != null && spawnEggColorsElement.isJsonObject()) {
-                            JsonObject spawnEggColorsJson = spawnEggColorsElement.getAsJsonObject();
-                            JsonElement primaryElement = spawnEggColorsJson.get("primary");
-                            JsonElement secondaryElement = spawnEggColorsJson.get("secondary");
-
-                            if (primaryElement != null && secondaryElement != null &&
-                                    primaryElement.isJsonPrimitive() && secondaryElement.isJsonPrimitive()) {
-                                String primaryColorCandidate = primaryElement.getAsString();
-                                String secondaryColorCandidate = secondaryElement.getAsString();
-
-                                // Validate primary and secondary colors
-                                if (isValidColor(primaryColorCandidate) && isValidColor(secondaryColorCandidate)) {
-                                    primaryColor = primaryColorCandidate;
-                                    secondaryColor = secondaryColorCandidate;
-                                } else {
-                                    LOGGER.warn("Line {}: Invalid spawnEggColors format for '{}'. Using fallback colors.", lineNumber, currentEntityID);
-                                }
-                            }
-                        } else {
-                            LOGGER.warn("Line {}: 'spawnEggColors' property missing or invalid for '{}'. Using fallback colors.", lineNumber, currentEntityID);
-                        }
-                        // END spawnEggColors validation
-                        //</editor-fold>
-
-                        //<editor-fold desc="transformItems parse and validate">
-                        // BEGIN transformItems validation
-                        // Check if the JSON object has a "transformItems" property
-                        // TODO: Still need to add checks unique to each property and provide fallbacks!!
-                        JsonElement transformItemsElement = jsonObject.get("transformItems");
-
-                        if (transformItemsElement != null && transformItemsElement.isJsonArray()) {
-                            List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement);
-
-                            SammieJamSlimeData slimeData = createSammieJamSlimeData(currentEntityID, currentDisplayName, primaryColor, secondaryColor, transformItemsDataList);
-
-                            // Add the slimeData object to your array
-                            JsonObject slimeDataJson = gson.toJsonTree(slimeData).getAsJsonObject();
-                            jsonArray.add(slimeDataJson);
-                        }
-
-
-                        // END transformItems validation
-                        //</editor-fold>
-
                     } else {
                         LOGGER.warn("Line {}: Ignored invalid JSON data: {}", lineNumber, line);
                     }
@@ -146,43 +92,125 @@ public class JSONFileLoader {
                 }
             }
 
-            SammieJamSlimeData[] slimeDataArray = new SammieJamSlimeData[jsonArray.size()];
-
-            int i = 0;
-            for (JsonElement element : jsonArray) {
-                SammieJamSlimeData slimeData = gson.fromJson(element, SammieJamSlimeData.class);
-
-                // Add the slimeData object to your array
-                slimeDataArray[i] = slimeData;
-                encounteredEntityIDs.add(slimeData.getEntityID());
-                i++;
-            }
-
+            // Create an array from the list of SammieJamSlimeData
+            SammieJamSlimeData[] slimeDataArray = slimeDataList.toArray(new SammieJamSlimeData[0]);
             return slimeDataArray;
         } catch (IOException e) {
-            e.printStackTrace();
-            if (loadDefaultOnFail) {
-                // Load the default data from the mod's resources folder. I provided a default slimes.json
+            LOGGER.error("Error reading file: {}", filePath);
+            e.printStackTrace(); // Handle the exception appropriately
+        }
+
+        // Return null if there was an error
+        return null;
+    }
+
+
+
+    // HANDLERS //
+
+    //<editor-fold desc="handleEntityID">
+    private static String handleEntityID(JsonObject jsonObject, int lineNumber) {
+        JsonElement entityIDElement = jsonObject.get("entityID");
+
+        if (entityIDElement != null && entityIDElement.isJsonPrimitive() && entityIDElement.getAsString() != null) {
+            String currentEntityID = entityIDElement.getAsString();
+
+            // Validate the entityID format
+            if (!isValidEntityID(currentEntityID)) {
+                LOGGER.error("Line {}: Invalid entityID format for '{}': {}. Skipping.", lineNumber, currentEntityID, jsonObject.toString());
+                return null; // Return null for invalid entityID
             }
-        }
-        return null; // Return null if the file is empty or there was an IO error.
-    }
 
-    // Here we grab all that nicely validated and parsed data and wrap it into a nice package for delivery to SammieJamSlimeData
-    private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList) {
-        SammieJamSlimeData slimeData = new SammieJamSlimeData();
-        slimeData.setEntityID(currentEntityID);
-        if (currentDisplayName != null) {
-            slimeData.setDisplayName(currentDisplayName);
+            return currentEntityID;
+        } else {
+            LOGGER.warn("Line {}: JSON object missing or has an invalid 'entityID' property. Skipping.", lineNumber);
+            return null; // Return null for missing or invalid entityID
         }
+    }
+    //</editor-fold>
+
+    //<editor-fold desc="handleDisplayName">
+    private static String handleDisplayName(JsonObject jsonObject, int lineNumber, String currentEntityID) {
+        // Check if the JSON object has a "displayName" property
+        JsonElement displayNameElement = jsonObject.get("displayName");
+
+        String currentDisplayName = null;
+        if (displayNameElement != null && displayNameElement.isJsonPrimitive()) {
+            currentDisplayName = displayNameElement.getAsString();
+            // Validate the displayName here
+            if (!isValidDisplayName(currentDisplayName)) {
+                LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Using as-is.", lineNumber, currentEntityID, currentDisplayName);
+            }
+        } else {
+            LOGGER.warn("Line {}: 'displayName' property missing or invalid for '{}'. Using as-is.", lineNumber, currentEntityID);
+        }
+
+        return currentDisplayName;
+    }
+    //</editor-fold>
+
+    //<editor-fold desc="handleSpawnEggColors">
+    private static void handleSpawnEggColors(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData) {
+        String primaryColor = FALLBACK_PRIMARY_COLOR;
+        String secondaryColor = FALLBACK_SECONDARY_COLOR;
+
+        // Check if the JSON object has a "spawnEggColors" property
+        JsonElement spawnEggColorsElement = jsonObject.get("spawnEggColors");
+
+        if (spawnEggColorsElement != null && spawnEggColorsElement.isJsonObject()) {
+            JsonObject spawnEggColorsJson = spawnEggColorsElement.getAsJsonObject();
+            JsonElement primaryElement = spawnEggColorsJson.get("primary");
+            JsonElement secondaryElement = spawnEggColorsJson.get("secondary");
+
+            // Validate primary color
+            if (primaryElement != null && primaryElement.isJsonPrimitive()) {
+                String primaryColorCandidate = primaryElement.getAsString();
+                if (isValidColor(primaryColorCandidate)) {
+                    primaryColor = primaryColorCandidate;
+                } else {
+                    LOGGER.warn("Line {}: Invalid primary color format for '{}' in '{}'. Using fallback primary color.", lineNumber, currentEntityID, primaryColorCandidate);
+                }
+            }
+
+            // Validate secondary color
+            if (secondaryElement != null && secondaryElement.isJsonPrimitive()) {
+                String secondaryColorCandidate = secondaryElement.getAsString();
+                if (isValidColor(secondaryColorCandidate)) {
+                    secondaryColor = secondaryColorCandidate;
+                } else {
+                    LOGGER.warn("Line {}: Invalid secondary color format for '{}' in '{}'. Using fallback secondary color.", lineNumber, currentEntityID, secondaryColorCandidate);
+                }
+            }
+        } else {
+            LOGGER.warn("Line {}: 'spawnEggColors' property missing or invalid for '{}'. Using fallback colors.", lineNumber, currentEntityID);
+        }
+
+        // Set the spawnEggColors property in your SammieJamSlimeData instance
         slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
-        slimeData.setTransformItems(transformItemsDataList);
-        return slimeData;
     }
+    //</editor-fold>
 
+    //<editor-fold desc="handleTransformItems">
+    private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, JsonArray jsonArray) {
+        // Check if the JSON object has a "transformItems" property
+        JsonElement transformItemsElement = jsonObject.get("transformItems");
 
-    //<editor-fold desc="item objects for transformItems parse and validate">
-    // BEGIN item for transformItems validation
+        if (transformItemsElement != null && transformItemsElement.isJsonArray()) {
+            List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement);
+
+            // Create an instance of SammieJamSlimeData and set its properties
+            SammieJamSlimeData slimeData = new SammieJamSlimeData();
+            slimeData.setEntityID(currentEntityID);
+            slimeData.setTransformItems(transformItemsDataList);
+
+            // Add the slimeData object to your array
+            JsonObject slimeDataJson = gson.toJsonTree(slimeData).getAsJsonObject();
+            jsonArray.add(slimeDataJson);
+        }
+    }
+    //</editor-fold>
+
+    //<editor-fold desc="getTransformItems">
     private static List<SammieJamSlimeData.TransformItem> getTransformItems(JsonElement transformItemsElement) {
         JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
 
@@ -194,41 +222,53 @@ public class JSONFileLoader {
             if (itemElement.isJsonObject()) {
                 JsonObject itemObject = itemElement.getAsJsonObject();
 
-                // Parse and validate the "itemID" property (expects string)
+                // Extract the "itemID" property and validate it
                 JsonElement itemIDElement = itemObject.get("itemID");
                 if (itemIDElement != null && itemIDElement.isJsonPrimitive() && itemIDElement.getAsString() != null) {
                     String itemID = itemIDElement.getAsString();
 
-                    // Parse and validate the "consumeItem" property (expects boolean)
-                    JsonElement consumeItemElement = itemObject.get("consumeItem");
-                    if (consumeItemElement != null && consumeItemElement.isJsonPrimitive() && consumeItemElement.getAsJsonPrimitive().isBoolean()) {
-                        boolean consumeItem = consumeItemElement.getAsBoolean();
+                    // Continue processing only if itemID is valid
+                    if (isValidItemID(itemID)) {
+                        // Extract and validate the "consumeItem" property (optional)
+                        boolean consumeItem = getBooleanOrDefault(itemObject, "consumeItem", FALLBACK_CONSUME_ITEM);
 
-                        // Parse and validate the "reduceDurability" property (expects boolean)
-                        JsonElement reduceDurabilityElement = itemObject.get("reduceDurability");
-                        if (reduceDurabilityElement != null && reduceDurabilityElement.isJsonPrimitive() && reduceDurabilityElement.getAsJsonPrimitive().isBoolean()) {
-                            boolean reduceDurability = reduceDurabilityElement.getAsBoolean();
+                        // Extract and validate the "reduceDurability" property (optional)
+                        boolean reduceDurability = getBooleanOrDefault(itemObject, "reduceDurability", FALLBACK_REDUCE_DURABILITY);
 
-                            // Create an instance of TransformItem and add it to the list
-                            SammieJamSlimeData.TransformItem transformItem = new SammieJamSlimeData.TransformItem(itemID, consumeItem, reduceDurability);
-                            transformItemsDataList.add(transformItem);
-                        }
+                        // Create an instance of TransformItem and add it to the list
+                        SammieJamSlimeData.TransformItem transformItem = new SammieJamSlimeData.TransformItem(itemID, consumeItem, reduceDurability);
+                        transformItemsDataList.add(transformItem);
+                    } else {
+                        LOGGER.warn("Invalid 'itemID' format for '{}'. Skipping the entire object.", itemID);
                     }
+                } else {
+                    LOGGER.warn("Missing or invalid 'itemID' property in an object. Skipping the entire object.");
                 }
+            } else {
+                LOGGER.warn("Invalid object format in the 'transformItems' array. Skipping the entire object.");
             }
         }
         return transformItemsDataList;
     }
-    // END item for transformItems validation
     //</editor-fold>
 
+    //<editor-fold desc="getBooleanOrDefault">
+    private static boolean getBooleanOrDefault(JsonObject jsonObject, String propertyName, boolean fallback) {
+        JsonElement propertyElement = jsonObject.get(propertyName);
+        if (propertyElement != null && propertyElement.isJsonPrimitive() && propertyElement.getAsJsonPrimitive().isBoolean()) {
+            return propertyElement.getAsBoolean();
+        } else {
+            LOGGER.warn("Invalid '{}' property format or missing. Using the fallback value.", propertyName);
+            return fallback;
+        }
+    }
+    //</editor-fold>
 
+    ///////////////
 
+    // VALIDATORS //
 
-    // Place json validation methods and their respective validation conditions here.
-    //
-
-    // Validate entityID format
+    //<editor-fold desc="isValidEntityID">
     private static boolean isValidEntityID(String entityID) {
         if (entityID == null || entityID.isEmpty()) {
             return false;
@@ -250,8 +290,9 @@ public class JSONFileLoader {
             return false;
         }
     }
+    //</editor-fold>
 
-    // Validate displayName format
+    //<editor-fold desc="isValidDisplayName">
     // TODO: Check for caveats with localized name formatting. Generally, any formatting is acceptable, but let's warn users for caveats.
     // For now, we're just sanitizing values containing only whitespace, which then reverts back to the unlocalized name. Unlocalized names will still get added to en_us.lang in the resources folder to each entity.
     private static boolean isValidDisplayName(String displayName) {
@@ -260,21 +301,22 @@ public class JSONFileLoader {
             return false;
         }
 
-        // Sanitize spaces by removing them
-        String sanitizedDisplayName = displayName.replaceAll("\\s", "");
-
-        // Check if the sanitized displayName is empty
-        if (sanitizedDisplayName.isEmpty()) {
+        // Sanitize spaces by removing them if the value consists only of whitespace
+        if (displayName.trim().isEmpty()) {
             return false; // Treat it as missing
         }
 
         // If the displayName has passed all checks, consider it valid
         return true;
     }
+    //</editor-fold>
 
-    // Validate spawnEggColor data
+    //<editor-fold desc="isValidColor">
     private static boolean isValidColor(String color) {
         if (color != null) {
+            // Remove whitespace characters
+            color = color.replaceAll("\\s", "");
+
             // Remove "0x" or "#" prefixes if present
             color = color.replace("0x", "").replace("#", "");
 
@@ -288,5 +330,46 @@ public class JSONFileLoader {
         }
         return false;
     }
+    //</editor-fold>
+
+    //<editor-fold desc="isValidItemID">
+    private static boolean isValidItemID(String itemID) {
+        if (itemID != null && !itemID.isEmpty()) {
+            if (isItemRegistered(itemID)) {
+                return true; // The item ID is valid and registered
+            } else {
+                LOGGER.warn("Invalid itemID: '{}'. Item not found. Skipping.", itemID);
+                return false; // The item ID is invalid or not registered
+            }
+        } else {
+            LOGGER.warn("ItemID is missing or empty. Skipping.");
+            return false; // The item ID is missing or empty
+        }
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="isItemRegistered">
+    private static boolean isItemRegistered(String itemID) {
+        ResourceLocation itemResourceLocation = new ResourceLocation(itemID);
+        Item item = ForgeRegistries.ITEMS.getValue(itemResourceLocation);
+        return item != null;
+    }
+    //</editor-fold>
+
+    ////////////////
+
+    // Here we grab all that nicely validated and parsed data and wrap it into a nice package for delivery to SammieJamSlimeData
+    private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList) {
+        SammieJamSlimeData slimeData = new SammieJamSlimeData();
+        slimeData.setEntityID(currentEntityID);
+        if (currentDisplayName != null) {
+            slimeData.setDisplayName(currentDisplayName);
+        }
+        slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+        slimeData.setTransformItems(transformItemsDataList);
+        return slimeData;
+    }
+
 
 }
