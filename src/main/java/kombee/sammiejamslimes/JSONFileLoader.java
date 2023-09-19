@@ -127,22 +127,17 @@ public class JSONFileLoader {
                         if (transformItemsElement != null && transformItemsElement.isJsonArray()) {
                             List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement);
 
-                            // Create a new SammieJamSlimeData object and set its properties
-                            SammieJamSlimeData slimeData = new SammieJamSlimeData();
-                            slimeData.setEntityID(currentEntityID);
-                            if (currentDisplayName != null) {
-                                slimeData.setDisplayName(currentDisplayName);
-                            }
-                            slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
-                            slimeData.setTransformItems(transformItemsDataList);
+                            SammieJamSlimeData slimeData = createSammieJamSlimeData(currentEntityID, currentDisplayName, primaryColor, secondaryColor, transformItemsDataList);
 
                             // Add the slimeData object to your array
                             JsonObject slimeDataJson = gson.toJsonTree(slimeData).getAsJsonObject();
                             jsonArray.add(slimeDataJson);
-
                         }
+
+
                         // END transformItems validation
                         //</editor-fold>
+
                     } else {
                         LOGGER.warn("Line {}: Ignored invalid JSON data: {}", lineNumber, line);
                     }
@@ -173,6 +168,21 @@ public class JSONFileLoader {
         return null; // Return null if the file is empty or there was an IO error.
     }
 
+    // Here we grab all that nicely validated and parsed data and wrap it into a nice package for delivery to SammieJamSlimeData
+    private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList) {
+        SammieJamSlimeData slimeData = new SammieJamSlimeData();
+        slimeData.setEntityID(currentEntityID);
+        if (currentDisplayName != null) {
+            slimeData.setDisplayName(currentDisplayName);
+        }
+        slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+        slimeData.setTransformItems(transformItemsDataList);
+        return slimeData;
+    }
+
+
+    //<editor-fold desc="item objects for transformItems parse and validate">
+    // BEGIN item for transformItems validation
     private static List<SammieJamSlimeData.TransformItem> getTransformItems(JsonElement transformItemsElement) {
         JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
 
@@ -209,6 +219,11 @@ public class JSONFileLoader {
         }
         return transformItemsDataList;
     }
+    // END item for transformItems validation
+    //</editor-fold>
+
+
+
 
     // Place json validation methods and their respective validation conditions here.
     //
