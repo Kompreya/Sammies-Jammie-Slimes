@@ -3,6 +3,9 @@ package kombee.sammiejamslimes.data;
 import com.google.gson.*;
 
 import kombee.sammiejamslimes.SammieJamSlimes;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.JsonToNBT;
+import net.minecraft.nbt.NBTException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -221,8 +224,6 @@ public class JSONFileLoader {
     //<editor-fold desc="getTransformItems">
     private static List<SammieJamSlimeData.TransformItem> getTransformItems(JsonElement transformItemsElement, int metadata) {
         JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
-
-        // Create a list to hold the validated transform item data
         List<SammieJamSlimeData.TransformItem> transformItemsDataList = new ArrayList<>();
 
         // Iterate through the objects in the array
@@ -243,8 +244,25 @@ public class JSONFileLoader {
                         // Extract and validate the "reduceDurability" property (optional)
                         boolean reduceDurability = getBooleanOrDefault(itemObject, "reduceDurability", FALLBACK_REDUCE_DURABILITY);
 
+                        // Extract and validate the "nbt" property (optional)
+                        JsonElement nbtElement = itemObject.get("nbt");
+                        NBTTagCompound nbtCompound = null; // Initialize as null
+                        if (nbtElement != null && nbtElement.isJsonObject()) {
+                            // The "nbt" property exists and is an object, so you can proceed to parse and validate it
+                            JsonObject nbtObject = nbtElement.getAsJsonObject();
+                            String nbtString = nbtObject.toString();
+
+                            try {
+                                NBTTagCompound parsedNBT = JsonToNBT.getTagFromJson(nbtString);
+                                // Store the parsed NBT data
+                                nbtCompound = parsedNBT;
+                            } catch (NBTException e) {
+                                LOGGER.warn("Invalid 'nbt' property format for '{}'. Skipping the NBT data.", itemID);
+                            }
+                        }
+
                         // Create an instance of TransformItem and add it to the list
-                        SammieJamSlimeData.TransformItem transformItem = new SammieJamSlimeData.TransformItem(itemID, metadata, consumeItem, reduceDurability);
+                        SammieJamSlimeData.TransformItem transformItem = new SammieJamSlimeData.TransformItem(itemID, metadata, consumeItem, reduceDurability, nbtCompound);
                         transformItemsDataList.add(transformItem);
                     } else {
                         LOGGER.warn("Invalid 'itemID' format for '{}'. Skipping the entire object.", itemID);
@@ -258,6 +276,7 @@ public class JSONFileLoader {
         }
         return transformItemsDataList;
     }
+
     //</editor-fold>
 
     //<editor-fold desc="getBooleanOrDefault">

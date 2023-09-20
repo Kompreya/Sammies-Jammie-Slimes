@@ -3,6 +3,7 @@ package kombee.sammiejamslimes.data;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import kombee.sammiejamslimes.SammieJamSlimes;
+import net.minecraft.nbt.NBTTagCompound;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -121,16 +122,18 @@ public class SammieJamSlimeData {
 
     public static class TransformItem {
         private String itemID;
-        private int metadata; // New field for metadata
+        private int metadata; // Metadata field
         private boolean consumeItem;
         private boolean reduceDurability;
+        private NBTTagCompound nbtData; // New field for NBT data
 
-        // Constructor with metadata parameter
-        public TransformItem(String itemID, int metadata, boolean consumeItem, boolean reduceDurability) {
+        // Constructor with metadata and NBT data parameters
+        public TransformItem(String itemID, int metadata, boolean consumeItem, boolean reduceDurability, NBTTagCompound nbtData) {
             this.itemID = itemID;
             this.metadata = metadata;
             this.consumeItem = consumeItem;
             this.reduceDurability = reduceDurability;
+            this.nbtData = nbtData;
         }
 
         // Getters for all fields
@@ -149,8 +152,11 @@ public class SammieJamSlimeData {
         public boolean isReduceDurability() {
             return reduceDurability;
         }
-    }
 
+        public NBTTagCompound getNbtData() {
+            return nbtData;
+        }
+    }
 
 
     public static class Appearance {
