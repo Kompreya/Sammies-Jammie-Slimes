@@ -23,6 +23,7 @@ public class JSONFileLoader {
     private static final String FALLBACK_SECONDARY_COLOR = "00FF00";
     private static final Boolean FALLBACK_CONSUME_ITEM = true;
     private static final Boolean FALLBACK_REDUCE_DURABILITY = false;
+    private static final ResourceLocation DEFAULT_SLIME_TEXTURE = new ResourceLocation("minecraft", "textures/entity/slime/slime.png");
 
     // SoC: Parsing and validating slimes.json before storing in SammieJamSlimeData
     // Here we perform a grand manner of validation checks on slimes.json.
@@ -79,6 +80,9 @@ public class JSONFileLoader {
 
                         // Handle transformItems property
                         handleTransformItems(jsonObject, lineNumber, currentEntityID, jsonArray);
+
+                        // Handle appearance property
+                        handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
 
                         // Create a new SammieJamSlimeData instance if needed
                         if (slimeData != null) {
@@ -264,6 +268,79 @@ public class JSONFileLoader {
     }
     //</editor-fold>
 
+    //<editor-fold desc="handleAppearance">
+    private static void handleAppearance(JsonObject jsonObject, int lineNumber, String currentEntityID, JsonArray jsonArray) {
+        // Check if the JSON object has an "appearance" property
+        JsonElement appearanceElement = jsonObject.get("appearance");
+
+        if (appearanceElement == null || !appearanceElement.isJsonObject()) {
+            // Use the fallback appearance
+            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+        } else {
+            // The "appearance" property exists and is an object
+            JsonObject appearanceObject = appearanceElement.getAsJsonObject();
+
+            // Check and validate the "type" property
+            JsonElement typeElement = appearanceObject.get("type");
+            if (typeElement == null || !typeElement.isJsonPrimitive() || !typeElement.getAsJsonPrimitive().isString()) {
+                // Use the fallback appearance
+                setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            } else {
+                String type = typeElement.getAsString();
+                if (type.equals("texture")) {
+                    handleTextureAppearance(appearanceObject, lineNumber, currentEntityID, jsonObject);
+                } else if (type.equals("color")) {
+                    handleColorAppearance(appearanceObject, lineNumber, currentEntityID, jsonObject);
+                } else {
+                    // Unknown "type" value, use the fallback appearance
+                    setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+                }
+            }
+        }
+    }
+
+
+    //</editor-fold>
+
+    //<editor-fold desc="handleTextureAppearance">
+    private static void handleTextureAppearance(JsonObject appearanceObject, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+        // Handle "texture" type
+        JsonElement sourceElement = appearanceObject.get("source");
+        if (sourceElement != null && sourceElement.isJsonPrimitive() && sourceElement.getAsString() != null) {
+            String source = sourceElement.getAsString();
+            // Validate and process the "source" value for "texture" type
+            if (!isValidTextureSource(source, lineNumber, currentEntityID, jsonObject)) {
+                // Invalid source, fallback has already been set
+                return;
+            }
+
+            // Process the valid source here
+            // ...
+        } else {
+            LOGGER.warn("Line {}: 'source' property missing or invalid for 'texture' appearance. Skipping.", lineNumber);
+        }
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="handleColorAppearance">
+    private static boolean handleColorAppearance(JsonObject appearanceObject, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+        // Handle "color" type
+        JsonElement sourceElement = appearanceObject.get("source");
+        if (sourceElement != null && sourceElement.isJsonArray()) {
+            JsonArray colorArray = sourceElement.getAsJsonArray();
+            // Validate and process the "source" value for "color" type
+            return isValidColorSource(colorArray, lineNumber, currentEntityID, jsonObject);
+        } else {
+            LOGGER.warn("Line {}: 'source' property missing or invalid for 'color' appearance. Using the fallback texture.", lineNumber);
+            // Use the fallback appearance for "color" type
+            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            return false;
+        }
+    }
+
+    //</editor-fold>
+
     ///////////////
 
     // VALIDATORS //
@@ -357,7 +434,84 @@ public class JSONFileLoader {
     }
     //</editor-fold>
 
+    //<editor-fold desc="isValidTextureSource">
+    private static boolean isValidTextureSource(String source, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+        if (!source.endsWith(".png") && !source.endsWith(".json")) {
+            // The provided source does not have a '.png' or '.json' extension
+            LOGGER.warn("Line {}: Invalid 'source' property format for 'texture' appearance for '{}'. Using the fallback texture.", lineNumber, currentEntityID);
+            // Use the fallback appearance for "texture" type
+            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            return false;
+        }
+        return true;
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="isValidColorSource">
+    private static boolean isValidColorSource(JsonArray colorArray, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+        int numValues = colorArray.size();
+
+        if (numValues < 1 || numValues > 4) {
+            // Invalid number of values in the array
+            LOGGER.warn("Line {}: Invalid 'source' property format for 'color' appearance. Using the fallback texture.", lineNumber);
+            // Use the fallback appearance for "color" type
+            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            return false;
+        }
+
+        int r, g, b, a;
+
+        if (numValues == 1) {
+            // If one value is provided, assume it for R, G, B, and fully opaque alpha
+            r = g = b = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
+            a = 255;
+        } else if (numValues == 2) {
+            // If two values are provided, assume the first for R, G, B, and the second for alpha
+            r = g = b = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
+            a = Math.min(Math.max(colorArray.get(1).getAsInt(), 0), 255);
+
+            // If both values are between 0-255, assume the third value is 0
+            if (r >= 0 && r <= 255 && a >= 0 && a <= 255) {
+                b = 0;
+            }
+        } else if (numValues == 3) {
+            // If three values are provided, assume them for R, G, B, and fully opaque alpha
+            r = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
+            g = Math.min(Math.max(colorArray.get(1).getAsInt(), 0), 255);
+            b = Math.min(Math.max(colorArray.get(2).getAsInt(), 0), 255);
+            a = 255;
+        } else {
+            // If four values are provided, assume them for R, G, B, and alpha
+            r = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
+            g = Math.min(Math.max(colorArray.get(1).getAsInt(), 0), 255);
+            b = Math.min(Math.max(colorArray.get(2).getAsInt(), 0), 255);
+            a = Math.min(Math.max(colorArray.get(3).getAsInt(), 0), 255);
+        }
+
+        // Normalize the values
+        float normalizedR = r / 255.0f;
+        float normalizedG = g / 255.0f;
+        float normalizedB = b / 255.0f;
+        float normalizedA = a / 255.0f;
+
+        // Now you can use these normalized values as needed
+
+        return true; // Source is valid
+    }
+
+
+    //</editor-fold>
+
     ////////////////
+
+    private static void setFallbackAppearance(JsonObject jsonObject, ResourceLocation fallbackTexture) {
+        JsonObject fallbackAppearance = new JsonObject();
+        fallbackAppearance.addProperty("type", "texture");
+        fallbackAppearance.addProperty("source", fallbackTexture.toString());
+        jsonObject.add("appearance", fallbackAppearance);
+    }
+
 
     // Here we grab all that nicely validated and parsed data and wrap it into a nice package for delivery to SammieJamSlimeData
     private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList) {
