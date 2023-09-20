@@ -1,7 +1,8 @@
-package kombee.sammiejamslimes;
+package kombee.sammiejamslimes.data;
 
 import com.google.gson.*;
 
+import kombee.sammiejamslimes.SammieJamSlimes;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -109,7 +110,6 @@ public class JSONFileLoader {
     }
 
 
-
     // HANDLERS //
 
     //<editor-fold desc="handleEntityID">
@@ -196,11 +196,15 @@ public class JSONFileLoader {
 
     //<editor-fold desc="handleTransformItems">
     private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, JsonArray jsonArray) {
+        // Define and initialize the metadata variable if it's applicable
+        int metadata = 0; // Initialize with a default value or whatever is appropriate
+
         // Check if the JSON object has a "transformItems" property
         JsonElement transformItemsElement = jsonObject.get("transformItems");
 
         if (transformItemsElement != null && transformItemsElement.isJsonArray()) {
-            List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement);
+            // Use the metadata variable when calling getTransformItems
+            List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement, metadata);
 
             // Create an instance of SammieJamSlimeData and set its properties
             SammieJamSlimeData slimeData = new SammieJamSlimeData();
@@ -215,7 +219,7 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="getTransformItems">
-    private static List<SammieJamSlimeData.TransformItem> getTransformItems(JsonElement transformItemsElement) {
+    private static List<SammieJamSlimeData.TransformItem> getTransformItems(JsonElement transformItemsElement, int metadata) {
         JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
 
         // Create a list to hold the validated transform item data
@@ -240,7 +244,7 @@ public class JSONFileLoader {
                         boolean reduceDurability = getBooleanOrDefault(itemObject, "reduceDurability", FALLBACK_REDUCE_DURABILITY);
 
                         // Create an instance of TransformItem and add it to the list
-                        SammieJamSlimeData.TransformItem transformItem = new SammieJamSlimeData.TransformItem(itemID, consumeItem, reduceDurability);
+                        SammieJamSlimeData.TransformItem transformItem = new SammieJamSlimeData.TransformItem(itemID, metadata, consumeItem, reduceDurability);
                         transformItemsDataList.add(transformItem);
                     } else {
                         LOGGER.warn("Invalid 'itemID' format for '{}'. Skipping the entire object.", itemID);
@@ -411,27 +415,45 @@ public class JSONFileLoader {
 
     //<editor-fold desc="isValidItemID">
     private static boolean isValidItemID(String itemID) {
-        if (itemID != null && !itemID.isEmpty()) {
-            if (isItemRegistered(itemID)) {
-                return true; // The item ID is valid and registered
-            } else {
-                LOGGER.warn("Invalid itemID: '{}'. Item not found. Skipping.", itemID);
-                return false; // The item ID is invalid or not registered
-            }
-        } else {
-            LOGGER.warn("ItemID is missing or empty. Skipping.");
-            return false; // The item ID is missing or empty
+        if (itemID == null || itemID.isEmpty()) {
+            LOGGER.warn("Item ID is missing or empty. Skipping.");
+            return false;
         }
+
+        // Split the itemID using a colon to check for metadata
+        String[] itemData = itemID.split(":");
+        if (itemData.length < 2 || itemData.length > 3) {
+            LOGGER.warn("Invalid item ID format for '{}'. Skipping.", itemID);
+            return false;
+        }
+
+        // Check if the item namespace and path are valid
+        ResourceLocation itemResourceLocation = new ResourceLocation(itemData[0], itemData[1]);
+        if (!ForgeRegistries.ITEMS.containsKey(itemResourceLocation)) {
+            LOGGER.warn("Invalid item ID format for '{}'. Namespace or path is not valid. Skipping.", itemID);
+            return false;
+        }
+
+        // Check if metadata is specified and if it's an integer
+        if (itemData.length == 3) {
+            String metaString = itemData[2];
+            if (!metaString.equals("*")) {
+                try {
+                    int meta = Integer.parseInt(metaString);
+                    if (meta < 0) {
+                        LOGGER.warn("Invalid metadata '{}' for item ID '{}'. Metadata must be a non-negative integer. Skipping.", meta, itemID);
+                        return false;
+                    }
+                } catch (NumberFormatException e) {
+                    LOGGER.warn("Invalid metadata format for item ID '{}'. Metadata must be a valid integer. Skipping.", itemID);
+                    return false;
+                }
+            }
+        }
+
+        return true; // Valid item ID format
     }
 
-    //</editor-fold>
-
-    //<editor-fold desc="isItemRegistered">
-    private static boolean isItemRegistered(String itemID) {
-        ResourceLocation itemResourceLocation = new ResourceLocation(itemID);
-        Item item = ForgeRegistries.ITEMS.getValue(itemResourceLocation);
-        return item != null;
-    }
     //</editor-fold>
 
     //<editor-fold desc="isValidTextureSource">
@@ -464,16 +486,22 @@ public class JSONFileLoader {
 
         if (numValues == 1) {
             // If one value is provided, assume it for R, G, B, and fully opaque alpha
-            r = g = b = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
+            int value = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
+            r = g = b = value;
             a = 255;
+            LOGGER.warn("Line {}: Assuming provided value {} for 'color' appearance for '{}'.", lineNumber, value, currentEntityID);
         } else if (numValues == 2) {
             // If two values are provided, assume the first for R, G, B, and the second for alpha
-            r = g = b = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
-            a = Math.min(Math.max(colorArray.get(1).getAsInt(), 0), 255);
+            int value1 = Math.min(Math.max(colorArray.get(0).getAsInt(), 0), 255);
+            int value2 = Math.min(Math.max(colorArray.get(1).getAsInt(), 0), 255);
+            r = g = b = value1;
+            a = value2;
+            LOGGER.warn("Line {}: Assuming provided values {} for 'color' appearance for '{}'.", lineNumber, value1 + ", " + value2, currentEntityID);
 
             // If both values are between 0-255, assume the third value is 0
             if (r >= 0 && r <= 255 && a >= 0 && a <= 255) {
                 b = 0;
+                LOGGER.warn("Line {}: Assuming B value 0 for 'color' appearance for '{}'.", lineNumber, currentEntityID);
             }
         } else if (numValues == 3) {
             // If three values are provided, assume them for R, G, B, and fully opaque alpha
@@ -499,6 +527,7 @@ public class JSONFileLoader {
 
         return true; // Source is valid
     }
+
 
 
     //</editor-fold>

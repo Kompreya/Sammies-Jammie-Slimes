@@ -1,7 +1,8 @@
-package kombee.sammiejamslimes;
+package kombee.sammiejamslimes.data;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import kombee.sammiejamslimes.SammieJamSlimes;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -120,18 +121,25 @@ public class SammieJamSlimeData {
 
     public static class TransformItem {
         private String itemID;
+        private int metadata; // New field for metadata
         private boolean consumeItem;
         private boolean reduceDurability;
 
-        // This is how each property in a given transformItem object is associated with each other
-        public TransformItem(String itemID, boolean consumeItem, boolean reduceDurability) {
+        // Constructor with metadata parameter
+        public TransformItem(String itemID, int metadata, boolean consumeItem, boolean reduceDurability) {
             this.itemID = itemID;
+            this.metadata = metadata;
             this.consumeItem = consumeItem;
             this.reduceDurability = reduceDurability;
         }
 
+        // Getters for all fields
         public String getItemID() {
             return itemID;
+        }
+
+        public int getMetadata() {
+            return metadata;
         }
 
         public boolean isConsumeItem() {
@@ -142,6 +150,7 @@ public class SammieJamSlimeData {
             return reduceDurability;
         }
     }
+
 
 
     public static class Appearance {

@@ -1,5 +1,8 @@
-package kombee.sammiejamslimes;
+package kombee.sammiejamslimes.config;
 
+import kombee.sammiejamslimes.data.JSONFileLoader;
+import kombee.sammiejamslimes.data.SammieJamSlimeData;
+import kombee.sammiejamslimes.SammieJamSlimes;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;

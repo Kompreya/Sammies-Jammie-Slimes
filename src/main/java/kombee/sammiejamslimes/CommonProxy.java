@@ -1,5 +1,8 @@
 package kombee.sammiejamslimes;
 
+import kombee.sammiejamslimes.config.ConfigFolderHandler;
+import kombee.sammiejamslimes.data.JSONFileLoader;
+import kombee.sammiejamslimes.data.SammieJamSlimeData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
