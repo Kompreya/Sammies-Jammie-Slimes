@@ -88,6 +88,10 @@ public class JSONFileLoader {
                         // Handle appearance property
                         handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
 
+                        // Within your main parsing loop
+                        handleTransformTo(jsonObject, lineNumber, currentEntityID, slimeData, encounteredEntityIDs);
+
+
                         // Create a new SammieJamSlimeData instance if needed
                         if (slimeData != null) {
                             slimeDataList.add(slimeData);
@@ -364,6 +368,39 @@ public class JSONFileLoader {
 
     //</editor-fold>
 
+    private static void handleTransformTo(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData, Set<String> encounteredEntityIDs) {
+        // Check if the "transformTo" property exists in the JSON object
+        JsonElement transformToElement = jsonObject.get("transformTo");
+
+        if (transformToElement != null && transformToElement.isJsonObject()) {
+            // The "transformTo" property exists and is an object
+            JsonObject transformToObject = transformToElement.getAsJsonObject();
+
+            // Extract the "listType" property
+            boolean listType = isValidListType(transformToObject, lineNumber, currentEntityID);
+
+            if (listType) {
+                // Extract the "list" property if listType is valid
+                List<String> list = isValidList(transformToObject, lineNumber, currentEntityID, encounteredEntityIDs);
+
+            } else {
+                // Log a warning for invalid "listType" property
+                LOGGER.warn("Line {}: Invalid 'listType' property in 'transformTo'. Skipping 'list' property and using an empty array.", lineNumber);
+            }
+        } else {
+            // Log a warning for missing or invalid "transformTo" property
+            LOGGER.warn("Line {}: Missing or invalid 'transformTo' property. Defaulting to listType 'blacklist' with an empty list array.", lineNumber);
+        }
+    }
+
+
+    /*
+    private static List<String> isValidList(JsonObject transformToObject, int lineNumber, String currentEntityID) {
+        return null;
+    }
+    */
+
+
     ///////////////
 
     // VALIDATORS //
@@ -551,6 +588,71 @@ public class JSONFileLoader {
 
     //</editor-fold>
 
+    //<editor-fold desc="isValidListType">
+    private static boolean isValidListType(JsonObject transformToObject, int lineNumber, String currentEntityID) {
+        JsonElement listTypeElement = transformToObject.get("listType");
+
+        if (listTypeElement != null && listTypeElement.isJsonPrimitive()) {
+            String listType = listTypeElement.getAsString();
+            if ("whitelist".equals(listType)) {
+                return true; // Set to true for whitelist
+            } else if ("blacklist".equals(listType)) {
+                return false; // Set to false for blacklist
+            } else {
+                // Log a warning for an invalid listType
+                LOGGER.warn("Line {}: Invalid 'listType' value for '{}' in 'transformTo'. Using fallback (blacklist).", lineNumber, currentEntityID);
+            }
+        } else {
+            // Log a warning for missing or invalid "listType" property
+            LOGGER.warn("Line {}: Missing or invalid 'listType' property in 'transformTo'. Using fallback (blacklist).", lineNumber);
+        }
+
+        // Return false to represent blacklist as the default behavior
+        return false;
+    }
+    //</editor-fold>
+
+
+    private static List<String> isValidList(JsonObject transformToObject, int lineNumber, String currentEntityID, Set<String> encounteredEntityIDs) {
+        // Extract the "list" property (optional)
+        JsonElement listElement = transformToObject.get("list");
+        List<String> list = new ArrayList<>();
+
+        if (listElement != null && listElement.isJsonArray()) {
+            JsonArray listArray = listElement.getAsJsonArray();
+
+            for (JsonElement entityIDElement : listArray) {
+                if (entityIDElement.isJsonPrimitive()) {
+                    String entityID = entityIDElement.getAsString();
+
+                    // Check if the entityID matches the currentEntityID
+                    if (entityID.equals(currentEntityID)) {
+                        LOGGER.warn("Line {}: Entity ID '{}' cannot be in its own transformTo 'list'. Skipping.", lineNumber, currentEntityID);
+                        continue;
+                    }
+
+                    // Check if the entityID matches any already encountered entityID
+                    if (!encounteredEntityIDs.contains(entityID)) {
+                        LOGGER.warn("Line {}: Entity ID '{}' in 'transformTo' 'list' is not a valid entity ID. Skipping.", lineNumber, entityID);
+                        continue;
+                    }
+
+                    // Valid entity ID, add it to the list
+                    list.add(entityID);
+                } else {
+                    // Log a warning for invalid entity ID format
+                    LOGGER.warn("Line {}: Invalid entity ID format in 'transformTo' 'list' array. Skipping.", lineNumber);
+                }
+            }
+        } else {
+            // Log a warning for missing or invalid "list" property
+            LOGGER.warn("Line {}: Missing or invalid 'transformTo' 'list' property. Using empty list.", lineNumber);
+        }
+
+        return list;
+    }
+
+
     ////////////////
 
     private static void setFallbackAppearance(JsonObject jsonObject, ResourceLocation fallbackTexture) {
@@ -562,7 +664,7 @@ public class JSONFileLoader {
 
 
     // Here we grab all that nicely validated and parsed data and wrap it into a nice package for delivery to SammieJamSlimeData
-    private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList) {
+    private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList, String listType, List<String> list) {
         SammieJamSlimeData slimeData = new SammieJamSlimeData();
         slimeData.setEntityID(currentEntityID);
         if (currentDisplayName != null) {
@@ -570,8 +672,11 @@ public class JSONFileLoader {
         }
         slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
         slimeData.setTransformItems(transformItemsDataList);
+        slimeData.setTransformToListType(listType);
+        slimeData.setTransformToList(list);
         return slimeData;
     }
+
 
 
 }
