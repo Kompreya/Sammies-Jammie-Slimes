@@ -66,13 +66,12 @@ public class JSONFileLoader {
             int i = 0; // Initialize index outside the loop
             int iterationsWithoutProgress = 0; // Track iterations without progress
 
+            // First Pass - Collect Valid EntityIDs
             while (i < jsonArray.size() && iterationsWithoutProgress < jsonArray.size()) {
                 JsonElement jsonElement = jsonArray.get(i);
                 if (jsonElement.isJsonObject()) {
                     JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-                    slimeData = new SammieJamSlimeData();
-                    LOGGER.debug("Processing JSON element {}.", i);
                     // Handle entityID property
                     String currentEntityID = handleEntityID(jsonObject, lineNumber);
 
@@ -83,31 +82,13 @@ public class JSONFileLoader {
                         continue;
                     }
 
-                    // Handle displayName property
-                    String currentDisplayName = handleDisplayName(jsonObject, lineNumber, currentEntityID);
+                    // Add the valid entityID to the encounteredEntityIDs set
+                    encounteredEntityIDs.add(currentEntityID);
 
-                    // Handle spawnEggColors property
-                    handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, slimeData);
-
-                    // Handle transformItems property
-                    handleTransformItems(jsonObject, lineNumber, currentEntityID, jsonArray);
-
-                    // Handle appearance property
-                    handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
-
-                    // Within your main parsing loop
-                    handleTransformTo(jsonObject, lineNumber, currentEntityID, slimeData, encounteredEntityIDs);
-                    LOGGER.debug("Finished processing 'transformTo' property.");
-
-                    boolean spawningEnable = handleSpawningEnable(jsonObject, lineNumber, currentEntityID);
-                    LOGGER.debug("Finished processing JSON object for entity ID: {}", currentEntityID);
+                    // ... (Handle other properties dependent on valid entityIDs)
 
                     // Create a new SammieJamSlimeData instance if needed
-                    if (slimeData != null) {
-                        slimeDataList.add(slimeData);
-                        LOGGER.debug("Completed iteration {} of the JSON parsing loop.", i);
-                    }
-
+                    slimeData = new SammieJamSlimeData();
                     i++;
                     iterationsWithoutProgress = 0; // Reset the counter since progress was made
                 } else {
@@ -115,6 +96,33 @@ public class JSONFileLoader {
                     i++; // Increment the index even for invalid JSON data
                     iterationsWithoutProgress++;
                 }
+            }
+
+            // Second Pass - Process Remaining Properties
+            for (String currentEntityID : encounteredEntityIDs) {
+                // Find the corresponding JSON object in the original JSON array
+                JsonObject jsonObject = findJsonObjectForEntityID(jsonArray, currentEntityID, lineNumber);
+
+                LOGGER.debug("Processing JSON object for entity ID: {}", currentEntityID);
+                // Process other properties for this entityID
+                // Handle displayName property
+                String currentDisplayName = handleDisplayName(jsonObject, lineNumber, currentEntityID);
+
+                // Handle spawnEggColors property
+                handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, slimeData);
+
+                // Handle transformItems property
+                handleTransformItems(jsonObject, lineNumber, currentEntityID, jsonArray);
+
+                // Handle appearance property
+                handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
+
+                // Within your main parsing loop
+                handleTransformTo(jsonObject, lineNumber, currentEntityID, slimeData, encounteredEntityIDs);
+                LOGGER.debug("Finished processing 'transformTo' property.");
+
+                boolean spawningEnable = handleSpawningEnable(jsonObject, lineNumber, currentEntityID);
+                LOGGER.debug("Finished processing JSON object for entity ID: {}", currentEntityID);
             }
 
             // Create an array from the list of SammieJamSlimeData
@@ -134,8 +142,21 @@ public class JSONFileLoader {
         return null;
     }
 
+    private static JsonObject findJsonObjectForEntityID(JsonArray jsonArray, String entityID, int lineNumber) {
+        for (JsonElement jsonElement : jsonArray) {
+            if (jsonElement.isJsonObject()) {
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
 
+                // Handle entityID property
+                String currentEntityID = handleEntityID(jsonObject, lineNumber);
 
+                if (currentEntityID != null && currentEntityID.equals(entityID)) {
+                    return jsonObject; // Found the matching JSON object
+                }
+            }
+        }
+        return null; // Entity ID not found in the JSON array
+    }
 
 
     // HANDLERS //
@@ -394,32 +415,57 @@ public class JSONFileLoader {
         // Check if the "transformTo" property exists in the JSON object
         JsonElement transformToElement = jsonObject.get("transformTo");
 
-        if (transformToElement != null && transformToElement.isJsonObject()) {
-            // The "transformTo" property exists and is an object
-            JsonObject transformToObject = transformToElement.getAsJsonObject();
-
-            // Extract the "listType" property
-            boolean listType = isValidListType(transformToObject, lineNumber, currentEntityID);
-
-            if (listType) {
-                // Extract the "list" property if listType is valid
-                List<String> list = isValidList(transformToObject, lineNumber, currentEntityID, encounteredEntityIDs);
-                // Use the 'list' as needed
-            } else {
-                // Log a warning for invalid "listType" property
-                LOGGER.warn("Line {}: Invalid 'listType' property in 'transformTo'. Skipping 'list' property and using a listType of 'blacklist' with an empty list array.", lineNumber);
-            }
-        } else {
-            // Log a warning for missing or invalid "transformTo" property
-            LOGGER.warn("Line {}: Missing or invalid 'transformTo' property. Defaulting to a listType of 'blacklist' with an empty list array.", lineNumber);
+        if (transformToElement == null || !transformToElement.isJsonObject()) {
+            // "transformTo" property is missing or not an object, supply defaults
+            LOGGER.warn("Line {}: Missing or invalid 'transformTo' property for '{}'. Defaulting to a listType of 'blacklist' with an empty list array.", lineNumber, currentEntityID);
 
             // Set the default values
             JsonObject defaultTransformTo = new JsonObject();
             defaultTransformTo.addProperty("listType", "blacklist");
             defaultTransformTo.add("list", new JsonArray()); // An empty list
             jsonObject.add("transformTo", defaultTransformTo);
+        } else {
+            // The "transformTo" property exists and is an object
+            JsonObject transformToObject = transformToElement.getAsJsonObject();
+
+            // Extract the "listType" property
+            boolean listType = isValidListType(transformToObject, lineNumber, currentEntityID);
+
+            if (!listType) {
+                // Log a warning for invalid "listType" property and set default
+                LOGGER.warn("Line {}: Invalid 'listType' value for '{}' in 'transformTo'. Using fallback (blacklist).", lineNumber, currentEntityID);
+
+                // Set the default listType value
+                transformToObject.addProperty("listType", "blacklist");
+            }
+
+            // Extract or create the "list" property
+            JsonElement listElement = transformToObject.get("list");
+            if (listElement == null || !listElement.isJsonArray()) {
+                LOGGER.warn("Line {}: Missing or invalid 'transformTo' 'list' property. Using empty list.", lineNumber);
+
+                // Set the default list as an empty array
+                transformToObject.add("list", new JsonArray());
+            } else if (!listElement.isJsonArray()) {
+                // Log a warning for invalid "list" property and replace with an empty array
+                LOGGER.warn("Line {}: Invalid 'transformTo' 'list' property. Using empty list.", lineNumber);
+                transformToObject.remove("list");
+                transformToObject.add("list", new JsonArray());
+            }
+
+            // Call isValidList to validate and populate the list
+            JsonArray listArray = transformToObject.getAsJsonArray("list");
+            List<String> list = isValidList(listArray, lineNumber, currentEntityID, encounteredEntityIDs);
+
+            // Remove and re-add the list property to ensure proper JSON formatting
+            transformToObject.remove("list");
+            for (String entityID : list) {
+                listArray.add(entityID);
+            }
+            transformToObject.add("list", listArray);
         }
     }
+
 
     //</editor-fold>
 
@@ -653,40 +699,31 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="isValidList">
-    private static List<String> isValidList(JsonObject transformToObject, int lineNumber, String currentEntityID, Set<String> encounteredEntityIDs) {
-        // Extract the "list" property (optional)
-        JsonElement listElement = transformToObject.get("list");
+    private static List<String> isValidList(JsonArray listArray, int lineNumber, String currentEntityID, Set<String> encounteredEntityIDs) {
         List<String> list = new ArrayList<>();
 
-        if (listElement != null && listElement.isJsonArray()) {
-            JsonArray listArray = listElement.getAsJsonArray();
+        for (JsonElement entityIDElement : listArray) {
+            if (entityIDElement.isJsonPrimitive()) {
+                String entityID = entityIDElement.getAsString();
 
-            for (JsonElement entityIDElement : listArray) {
-                if (entityIDElement.isJsonPrimitive()) {
-                    String entityID = entityIDElement.getAsString();
-
-                    // Check if the entityID matches the currentEntityID
-                    if (entityID.equals(currentEntityID)) {
-                        LOGGER.warn("Line {}: Entity ID '{}' cannot be in its own transformTo 'list'. Skipping.", lineNumber, currentEntityID);
-                        continue;
-                    }
-
-                    // Check if the entityID matches any already encountered entityID
-                    if (!encounteredEntityIDs.contains(entityID)) {
-                        LOGGER.warn("Line {}: Entity ID '{}' in 'transformTo' 'list' is not a valid entity ID. Skipping.", lineNumber, entityID);
-                        continue;
-                    }
-
-                    // Valid entity ID, add it to the list
-                    list.add(entityID);
-                } else {
-                    // Log a warning for invalid entity ID format
-                    LOGGER.warn("Line {}: Invalid entity ID format in 'transformTo' 'list' array. Skipping.", lineNumber);
+                // Check if the entityID matches the currentEntityID
+                if (entityID.equals(currentEntityID)) {
+                    LOGGER.warn("Line {}: Entity ID '{}' cannot be in its own transformTo 'list'. Skipping.", lineNumber, currentEntityID);
+                    continue;
                 }
+
+                // Check if the entityID matches any already encountered entityID
+                if (!encounteredEntityIDs.contains(entityID)) {
+                    LOGGER.warn("Line {}: Entity ID '{}' in 'transformTo' 'list' is not a valid entity ID. Skipping.", lineNumber, entityID);
+                    continue;
+                }
+
+                // Valid entity ID, add it to the list
+                list.add(entityID);
+            } else {
+                // Log a warning for invalid entity ID format
+                LOGGER.warn("Line {}: Invalid entity ID format in 'transformTo' 'list' array. Skipping.", lineNumber);
             }
-        } else {
-            // Log a warning for missing or invalid "list" property
-            LOGGER.warn("Line {}: Missing or invalid 'transformTo' 'list' property. Using empty list.", lineNumber);
         }
 
         return list;

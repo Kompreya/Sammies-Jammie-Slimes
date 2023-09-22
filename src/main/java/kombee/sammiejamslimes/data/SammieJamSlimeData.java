@@ -188,64 +188,6 @@ public class SammieJamSlimeData {
         }
     }
 
-    //Invalid formatting and data type handling
 
-
-    // Unused, leftover from validation move to jsonfileloader. Maybe usable later, unsure.
-    public boolean hasEntityIDError() {
-        return entityIDError;
-    }
-
-    public boolean hasDisplayNameError() {
-        return displayNameError;
-    }
-    public boolean isValidEntityID(String entityID) {
-        // Check if the entityID is not null and not empty
-        if (entityID == null || entityID.isEmpty()) {
-            return false;
-        }
-
-        // Checking for entityID formatting. Accepts lowercase, alphanumeric, underscore.
-        return entityID.matches("[a-z0-9_]");
-    }
-
-    private boolean isValidSpawnEggColorsJson(JsonObject spawnEggColorsJson) {
-        // Check if spawnEggColorsJson is not null
-        if (spawnEggColorsJson == null) {
-            return false;
-        }
-
-        // Check if "primary" and "secondary" properties exist and have valid formats
-        JsonElement primaryElement = spawnEggColorsJson.get("primary");
-        JsonElement secondaryElement = spawnEggColorsJson.get("secondary");
-
-        if (primaryElement == null || !primaryElement.isJsonPrimitive() || !isValidColor(primaryElement.getAsString())) {
-            return false;
-        }
-
-        if (secondaryElement == null || !secondaryElement.isJsonPrimitive() || !isValidColor(secondaryElement.getAsString())) {
-            return false;
-        }
-
-        // Check if "primary" color is empty
-        if (primaryElement.getAsString().isEmpty()) {
-            LOGGER.warn("The 'primary' color is empty in spawnEggColors. Using default primary color.");
-        }
-
-        // Check if "secondary" color is empty
-        if (secondaryElement.getAsString().isEmpty()) {
-            LOGGER.warn("The 'secondary' color is empty in spawnEggColors. Using default secondary color.");
-        }
-
-        return true;
-    }
-
-    private boolean isValidColor(String color) {
-        // You can implement your color format validation logic here
-        // For example, check if the color is a valid hexadecimal RGB code
-        // This depends on your specific requirements
-        // Here's a basic example:
-        return color.matches("^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$");
-    }
 
 }
