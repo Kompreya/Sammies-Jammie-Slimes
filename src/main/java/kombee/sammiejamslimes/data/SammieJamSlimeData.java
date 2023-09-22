@@ -28,15 +28,9 @@ public class SammieJamSlimeData {
     }
 
     // Currently unused. Validation is being performed during parse. Modify this later based on needs of code handling entity IDs
+
     public void setEntityID(String entityID) {
-        // Validate the entityID before setting it
-        if (isValidEntityID(entityID)) {
-            this.entityID = entityID;
-            entityIDError = false; // Reset the error flag if valid
-        } else {
-            entityIDError = true; // Set the error flag if invalid
-            LOGGER.error("Invalid entityID: {}. Expected format: lowercase alphanumeric or underscore.", entityID);
-        }
+        this.entityID = entityID;
     }
 
     public String getDisplayName() {
@@ -45,14 +39,7 @@ public class SammieJamSlimeData {
 
     // Same as entityID. Revisit later. Validation occurs in parse.
     public void setDisplayName(String displayName) {
-        // Validate displayName to ensure it's not empty
-        if (displayName != null && !displayName.isEmpty()) {
-            this.displayName = displayName;
-            displayNameError = false; // Reset the error flag if valid
-        } else {
-            displayNameError = true; // Set the error flag if empty
-            LOGGER.warn("displayName is empty. Using unlocalized name. Set displayName in slimes.json or in your localization file.");
-        }
+        this.displayName = displayName;
     }
 
     public SpawnEggColors getSpawnEggColors() {
@@ -96,8 +83,16 @@ public class SammieJamSlimeData {
         return transformTo;
     }
 
-    public boolean isSpawningEnabled() {
+    public void setTransformTo(TransformTo transformTo) {
+        this.transformTo = transformTo;
+    }
+
+    public boolean isSpawningEnable() {
         return spawningEnable;
+    }
+
+    public void setSpawningEnable(boolean spawningEnable) {
+        this.spawningEnable = spawningEnable;
     }
 
     public static class SpawnEggColors {
@@ -180,8 +175,16 @@ public class SammieJamSlimeData {
             return listType;
         }
 
+        public void setListType(String listType) {
+            this.listType = listType;
+        }
+
         public List<String> getList() {
             return list;
+        }
+
+        public void setList(List<String> list) {
+            this.list = list;
         }
     }
 

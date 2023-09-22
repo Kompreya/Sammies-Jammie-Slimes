@@ -21,6 +21,14 @@ public class CommonProxy {
 
     public void init() {
         LOGGER.info("Calling init in CommonProxy");
+        loadAndLogSlimeData();
+    }
+    public void postInit() {
+        LOGGER.info("Calling postInit in CommonProxy");
+        // Common post-initialization code for both client and server
+    }
+
+    private void loadAndLogSlimeData() {
         SammieJamSlimeData[] slimeDataArray = JSONFileLoader.loadSlimeData("config/sammiejamslimes/slimes.json", true);
 
         if (slimeDataArray != null) {
@@ -38,10 +46,6 @@ public class CommonProxy {
                     + "3. There was an I/O error while attempting to load the file.\n"
                     + "Please check your mod's configuration and ensure the 'slimes.json' file is properly formatted and located.");
         }
-    }
-    public void postInit() {
-        LOGGER.info("Calling postInit in CommonProxy");
-        // Common post-initialization code for both client and server
     }
 
     public SammieJamSlimeData getLoadedSlimeData() {
