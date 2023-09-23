@@ -22,6 +22,7 @@ public class JSONFileLoader {
     private static final Gson gson = new Gson();
     private static final JsonParser jsonParser = new JsonParser();
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
+    private static List<SammieJamSlimeData> slimeDataList = new ArrayList<>();
     private static final String FALLBACK_PRIMARY_COLOR = "FF0000";
     private static final String FALLBACK_SECONDARY_COLOR = "00FF00";
     private static final Boolean FALLBACK_CONSUME_ITEM = true;
@@ -44,12 +45,9 @@ public class JSONFileLoader {
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             StringBuilder jsonContentBuilder = new StringBuilder();
             String line;
-            int lineNumber = 0;
 
             // Track line number for use in logging.
             while ((line = reader.readLine()) != null) {
-                lineNumber++;
-
                 // Skip empty lines or lines with only whitespace
                 if (line.trim().isEmpty()) {
                     continue;
@@ -66,8 +64,14 @@ public class JSONFileLoader {
             int i = 0; // Initialize index outside the loop
             int iterationsWithoutProgress = 0; // Track iterations without progress
 
+            // Collect Valid EntityIDs in the order of their occurrence
+            List<String> entityIDList = new ArrayList<>();
+
+            //<editor-fold desc="First Pass.">
             // First Pass - Collect Valid EntityIDs
+            int lineNumber = 0;
             while (i < jsonArray.size() && iterationsWithoutProgress < jsonArray.size()) {
+                lineNumber++;
                 JsonElement jsonElement = jsonArray.get(i);
                 if (jsonElement.isJsonObject()) {
                     JsonObject jsonObject = jsonElement.getAsJsonObject();
@@ -85,7 +89,8 @@ public class JSONFileLoader {
                     // Add the valid entityID to the encounteredEntityIDs set
                     encounteredEntityIDs.add(currentEntityID);
 
-                    // ... (Handle other properties dependent on valid entityIDs)
+                    // Add the entityID to the list in the order of occurrence
+                    entityIDList.add(currentEntityID);
 
                     // Create a new SammieJamSlimeData instance if needed
                     slimeData = new SammieJamSlimeData();
@@ -97,22 +102,25 @@ public class JSONFileLoader {
                     iterationsWithoutProgress++;
                 }
             }
+            //</editor-fold>
 
             // Second Pass - Process Remaining Properties
-            for (String currentEntityID : encounteredEntityIDs) {
+            lineNumber = 0;
+            for (String currentEntityID : entityIDList) {
+                lineNumber++;
                 // Find the corresponding JSON object in the original JSON array
                 JsonObject jsonObject = findJsonObjectForEntityID(jsonArray, currentEntityID, lineNumber);
 
                 LOGGER.debug("Processing JSON object for entity ID: {}", currentEntityID);
-                // Process other properties for this entityID
+
                 // Handle displayName property
-                String currentDisplayName = handleDisplayName(jsonObject, lineNumber, currentEntityID);
+                handleDisplayName(jsonObject, lineNumber, currentEntityID, slimeData);
 
                 // Handle spawnEggColors property
                 handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, slimeData);
 
                 // Handle transformItems property
-                handleTransformItems(jsonObject, lineNumber, currentEntityID, jsonArray);
+                handleTransformItems(jsonObject, lineNumber, currentEntityID, slimeData);
 
                 // Handle appearance property
                 handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
@@ -123,7 +131,11 @@ public class JSONFileLoader {
 
                 boolean spawningEnable = handleSpawningEnable(jsonObject, lineNumber, currentEntityID);
                 LOGGER.debug("Finished processing JSON object for entity ID: {}", currentEntityID);
+
+                // Add the slimeData object to the list
+                slimeDataList.add(slimeData);
             }
+
 
             // Create an array from the list of SammieJamSlimeData
             SammieJamSlimeData[] slimeDataArray = slimeDataList.toArray(new SammieJamSlimeData[0]);
@@ -141,6 +153,7 @@ public class JSONFileLoader {
         // Return null if there was an error
         return null;
     }
+
 
     private static JsonObject findJsonObjectForEntityID(JsonArray jsonArray, String entityID, int lineNumber) {
         for (JsonElement jsonElement : jsonArray) {
@@ -183,23 +196,23 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="handleDisplayName">
-    private static String handleDisplayName(JsonObject jsonObject, int lineNumber, String currentEntityID) {
+    private static void handleDisplayName(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData) {
         // Check if the JSON object has a "displayName" property
         JsonElement displayNameElement = jsonObject.get("displayName");
 
-        String currentDisplayName = null;
         if (displayNameElement != null && displayNameElement.isJsonPrimitive()) {
-            currentDisplayName = displayNameElement.getAsString();
+            String currentDisplayName = displayNameElement.getAsString();
             // Validate the displayName here
-            if (!isValidDisplayName(currentDisplayName)) {
-                LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Using as-is.", lineNumber, currentEntityID, currentDisplayName);
+            if (isValidDisplayName(currentDisplayName)) {
+                slimeData.setDisplayName(currentDisplayName); // Set the displayName in the SammieJamSlimeData object
+            } else {
+                LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Ignoring.", lineNumber, currentEntityID, currentDisplayName);
             }
         } else {
-            LOGGER.warn("Line {}: 'displayName' property missing or invalid for '{}'. Using as-is.", lineNumber, currentEntityID);
+            LOGGER.warn("Line {}: 'displayName' property missing or invalid for '{}'. Ignoring.", lineNumber, currentEntityID);
         }
-
-        return currentDisplayName;
     }
+
     //</editor-fold>
 
     //<editor-fold desc="handleSpawnEggColors">
@@ -244,7 +257,7 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="handleTransformItems">
-    private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, JsonArray jsonArray) {
+    private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData) {
         // Define and initialize the metadata variable if it's applicable
         int metadata = 0; // Initialize with a default value or whatever is appropriate
 
@@ -252,19 +265,26 @@ public class JSONFileLoader {
         JsonElement transformItemsElement = jsonObject.get("transformItems");
 
         if (transformItemsElement != null && transformItemsElement.isJsonArray()) {
-            // Use the metadata variable when calling getTransformItems
-            List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement, metadata);
+            JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
+            if (!transformItemsArray.isJsonNull() && transformItemsArray.size() > 0) {
+                // The JSON array is not empty, proceed with processing
+                List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement, metadata);
 
-            // Create an instance of SammieJamSlimeData and set its properties
-            SammieJamSlimeData slimeData = new SammieJamSlimeData();
-            slimeData.setEntityID(currentEntityID);
-            slimeData.setTransformItems(transformItemsDataList);
+                if (currentEntityID != null) {
+                    // Create an instance of SammieJamSlimeData and set its properties
+                    SammieJamSlimeData slimeData = new SammieJamSlimeData();
+                    slimeData.setEntityID(currentEntityID);
+                    slimeData.setTransformItems(transformItemsDataList);
 
-            // Add the slimeData object to your array
-            JsonObject slimeDataJson = gson.toJsonTree(slimeData).getAsJsonObject();
-            jsonArray.add(slimeDataJson);
+                    slimeDataList.add(slimeData);
+                }
+            } else {
+                // The JSON array is empty, handle this case if needed
+            }
         }
     }
+
+
     //</editor-fold>
 
     //<editor-fold desc="getTransformItems">
@@ -465,8 +485,6 @@ public class JSONFileLoader {
             transformToObject.add("list", listArray);
         }
     }
-
-
     //</editor-fold>
 
     //<editor-fold desc="handleSpawningEnable">
@@ -680,10 +698,9 @@ public class JSONFileLoader {
 
         if (listTypeElement != null && listTypeElement.isJsonPrimitive()) {
             String listType = listTypeElement.getAsString();
-            if ("whitelist".equals(listType)) {
-                return true; // Set to true for whitelist
-            } else if ("blacklist".equals(listType)) {
-                return false; // Set to false for blacklist
+            if ("whitelist".equals(listType) || "blacklist".equals(listType)) {
+                // Valid "listType" value found in JSON
+                return "whitelist".equals(listType); // Return true for "whitelist" and false for "blacklist"
             } else {
                 // Log a warning for an invalid listType
                 LOGGER.warn("Line {}: Invalid 'listType' value for '{}' in 'transformTo'. Using fallback (blacklist).", lineNumber, currentEntityID);
@@ -693,9 +710,12 @@ public class JSONFileLoader {
             LOGGER.warn("Line {}: Missing or invalid 'listType' property in 'transformTo'. Using fallback (blacklist).", lineNumber);
         }
 
-        // Return false to represent blacklist as the default behavior
+        // Return false only if you are sure that "blacklist" should be the default behavior.
+        // Otherwise, consider returning true as a safe default.
         return false;
     }
+
+
     //</editor-fold>
 
     //<editor-fold desc="isValidList">
