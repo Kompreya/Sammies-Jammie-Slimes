@@ -1,16 +1,13 @@
-## TemplateDevEnv
+## Sammie Jammie Slimes
 
-Template workspace for modding Minecraft 1.12.2. Licensed under MIT, it is made for public use.
+Work in progress mod for Minecraft 1.12.2
 
-This template currently utilizies **Gradle 8.1.1** + **[RetroFuturaGradle](https://github.com/GTNewHorizons/RetroFuturaGradle) 1.3.6** + **Forge 14.23.5.2847**.
+Goal: To create a mod that allows the end user to define and configure transformative slimes through a json file.
+Can create your own slime entities with custom IDs, names, and color or texture.
+Can define what items you can use on the slimes which will transform them into other user defined slimes.
+Can define whitelists or blacklists for which slimes each slime is or isn't allowed to transform into.
 
-With **coremod and mixin support** that is easy to configure.
+Mod was inspired by my wife who wanted a slime mod that allowed you to feed slimes different flavor jams and the slimes turn into different jam slimes based on the jam flavor fed to them.
 
-### Instructions:
 
-1. Click `use this template` at the top.
-2. Clone the repository you have created with this template.
-3. In the local repository, run the command `gradlew setupDecompWorkspace`
-4. Open the project folder in IDEA.
-5. Right-click in IDEA `build.gradle` of your project, and select `Link Gradle Project`, after completion, hit `Refresh All` in the gradle tab on the right.
-6. Run `gradlew runClient` and `gradlew runServer`, or use the auto-imported run configurations in IntelliJ like `1. Run Client`.
+

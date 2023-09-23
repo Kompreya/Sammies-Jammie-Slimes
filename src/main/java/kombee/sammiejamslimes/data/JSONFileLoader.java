@@ -79,21 +79,26 @@ public class JSONFileLoader {
                     // Handle entityID property
                     String currentEntityID = handleEntityID(jsonObject, lineNumber);
 
-                    if (currentEntityID == null) {
+                    if (currentEntityID != null) {
+                        // Valid entityID, create a new slimeData instance
+                        slimeData = new SammieJamSlimeData();
+                        slimeData.setEntityID(currentEntityID);
+
+                        // Add the valid entityID to the encounteredEntityIDs set
+                        encounteredEntityIDs.add(currentEntityID);
+
+                        // Add the entityID to the list in the order of occurrence
+                        entityIDList.add(currentEntityID);
+
+                        // Add the slimeData object to the list
+                        slimeDataList.add(slimeData);
+                    } else {
                         // Invalid or missing entityID, skip this object
                         i++; // Increment the index and continue to the next element
                         iterationsWithoutProgress++;
                         continue;
                     }
 
-                    // Add the valid entityID to the encounteredEntityIDs set
-                    encounteredEntityIDs.add(currentEntityID);
-
-                    // Add the entityID to the list in the order of occurrence
-                    entityIDList.add(currentEntityID);
-
-                    // Create a new SammieJamSlimeData instance if needed
-                    slimeData = new SammieJamSlimeData();
                     i++;
                     iterationsWithoutProgress = 0; // Reset the counter since progress was made
                 } else {
@@ -108,33 +113,38 @@ public class JSONFileLoader {
             lineNumber = 0;
             for (String currentEntityID : entityIDList) {
                 lineNumber++;
+
                 // Find the corresponding JSON object in the original JSON array
                 JsonObject jsonObject = findJsonObjectForEntityID(jsonArray, currentEntityID, lineNumber);
 
-                LOGGER.debug("Processing JSON object for entity ID: {}", currentEntityID);
+                // Retrieve the existing slimeData object from the list
+                SammieJamSlimeData SlimeDataB = findSammieJamSlimeDataInList(currentEntityID, slimeDataList);
+
+                // Set the entityID to the retrieved slimeData instance
+                SlimeDataB.setEntityID(currentEntityID);
 
                 // Handle displayName property
-                handleDisplayName(jsonObject, lineNumber, currentEntityID, slimeData);
+                handleDisplayName(jsonObject, lineNumber, currentEntityID, SlimeDataB);
 
                 // Handle spawnEggColors property
-                handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, slimeData);
+                handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, SlimeDataB);
 
                 // Handle transformItems property
-                handleTransformItems(jsonObject, lineNumber, currentEntityID, slimeData);
+                handleTransformItems(jsonObject, lineNumber, currentEntityID, slimeDataList);
 
                 // Handle appearance property
                 handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
 
                 // Within your main parsing loop
-                handleTransformTo(jsonObject, lineNumber, currentEntityID, slimeData, encounteredEntityIDs);
+                handleTransformTo(jsonObject, lineNumber, currentEntityID, SlimeDataB, encounteredEntityIDs);
                 LOGGER.debug("Finished processing 'transformTo' property.");
 
                 boolean spawningEnable = handleSpawningEnable(jsonObject, lineNumber, currentEntityID);
                 LOGGER.debug("Finished processing JSON object for entity ID: {}", currentEntityID);
-
-                // Add the slimeData object to the list
-                slimeDataList.add(slimeData);
             }
+
+
+
 
 
             // Create an array from the list of SammieJamSlimeData
@@ -153,6 +163,17 @@ public class JSONFileLoader {
         // Return null if there was an error
         return null;
     }
+
+    private static SammieJamSlimeData findSammieJamSlimeDataInList(String entityID, List<SammieJamSlimeData> slimeDataList) {
+        for (SammieJamSlimeData SlimeDataB : slimeDataList) {
+            if (SlimeDataB.getEntityID().equals(entityID)) {
+                return SlimeDataB;
+            }
+        }
+        // If the entityID is not found, you can handle it here, e.g., by creating a new instance.
+        return new SammieJamSlimeData();
+    }
+
 
 
     private static JsonObject findJsonObjectForEntityID(JsonArray jsonArray, String entityID, int lineNumber) {
@@ -257,7 +278,7 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="handleTransformItems">
-    private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData) {
+    private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, List<SammieJamSlimeData> slimeDataList) {
         // Define and initialize the metadata variable if it's applicable
         int metadata = 0; // Initialize with a default value or whatever is appropriate
 
