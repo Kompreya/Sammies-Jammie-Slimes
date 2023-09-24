@@ -118,25 +118,25 @@ public class JSONFileLoader {
                 JsonObject jsonObject = findJsonObjectForEntityID(jsonArray, currentEntityID, lineNumber);
 
                 // Retrieve the existing slimeData object from the list
-                SammieJamSlimeData SlimeDataB = findSammieJamSlimeDataInList(currentEntityID, slimeDataList);
+                SammieJamSlimeData slimeDataB = findSammieJamSlimeDataInList(currentEntityID, slimeDataList);
 
                 // Set the entityID to the retrieved slimeData instance
-                SlimeDataB.setEntityID(currentEntityID);
+                slimeDataB.setEntityID(currentEntityID);
 
                 // Handle displayName property
-                handleDisplayName(jsonObject, lineNumber, currentEntityID, SlimeDataB);
+                handleDisplayName(jsonObject, lineNumber, currentEntityID, slimeDataB);
 
                 // Handle spawnEggColors property
-                handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, SlimeDataB);
+                handleSpawnEggColors(jsonObject, lineNumber, currentEntityID, slimeDataB);
 
                 // Handle transformItems property
-                handleTransformItems(jsonObject, lineNumber, currentEntityID, slimeDataList);
+                handleTransformItems(jsonObject, lineNumber, currentEntityID, slimeDataB);
 
                 // Handle appearance property
-                handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
+                handleAppearance(jsonObject, lineNumber, currentEntityID, slimeDataB);
 
                 // Handle transformTo property
-                handleTransformTo(jsonObject, lineNumber, currentEntityID, SlimeDataB, encounteredEntityIDs);
+                handleTransformTo(jsonObject, lineNumber, currentEntityID, slimeDataB, encounteredEntityIDs);
                 LOGGER.debug("Finished processing 'transformTo' property.");
 
                 // Handle spawningEnable property
@@ -161,9 +161,9 @@ public class JSONFileLoader {
     }
 
     private static SammieJamSlimeData findSammieJamSlimeDataInList(String entityID, List<SammieJamSlimeData> slimeDataList) {
-        for (SammieJamSlimeData SlimeDataB : slimeDataList) {
-            if (SlimeDataB.getEntityID().equals(entityID)) {
-                return SlimeDataB;
+        for (SammieJamSlimeData slimeDataB : slimeDataList) {
+            if (slimeDataB.getEntityID().equals(entityID)) {
+                return slimeDataB;
             }
         }
         // If the entityID is not found, handle it here, e.g., by creating a new instance.
@@ -211,7 +211,7 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="handleDisplayName">
-    private static void handleDisplayName(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData) {
+    private static void handleDisplayName(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         // Check if the JSON object has a "displayName" property
         JsonElement displayNameElement = jsonObject.get("displayName");
 
@@ -219,7 +219,7 @@ public class JSONFileLoader {
             String currentDisplayName = displayNameElement.getAsString();
             // Validate the displayName here
             if (isValidDisplayName(currentDisplayName)) {
-                slimeData.setDisplayName(currentDisplayName); // Set the displayName in the SammieJamSlimeData object
+                slimeDataB.setDisplayName(currentDisplayName); // Set the displayName in the slimeDataB variable
             } else {
                 LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Ignoring.", lineNumber, currentEntityID, currentDisplayName);
             }
@@ -231,7 +231,7 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="handleSpawnEggColors">
-    private static void handleSpawnEggColors(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData) {
+    private static void handleSpawnEggColors(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         String primaryColor = FALLBACK_PRIMARY_COLOR;
         String secondaryColor = FALLBACK_SECONDARY_COLOR;
 
@@ -266,13 +266,13 @@ public class JSONFileLoader {
             LOGGER.warn("Line {}: 'spawnEggColors' property missing or invalid for '{}'. Using fallback colors.", lineNumber, currentEntityID);
         }
 
-        // Set the spawnEggColors property in SammieJamSlimeData instance
-        slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+        // Set the spawnEggColors property in slimeDataB variable
+        slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
     }
     //</editor-fold>
 
     //<editor-fold desc="handleTransformItems">
-    private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, List<SammieJamSlimeData> slimeDataList) {
+    private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         // Define and initialize the metadata variable if it's applicable
         int metadata = 0; // Initialize with a default value
 
@@ -286,18 +286,16 @@ public class JSONFileLoader {
                 List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement, metadata);
 
                 if (currentEntityID != null) {
-                    // Create an instance of SammieJamSlimeData and set its properties
-                    SammieJamSlimeData slimeData = new SammieJamSlimeData();
-                    slimeData.setEntityID(currentEntityID);
-                    slimeData.setTransformItems(transformItemsDataList);
-
-                    slimeDataList.add(slimeData);
+                    // Set the properties of the existing SammieJamSlimeData instance (slimeDataB)
+                    slimeDataB.setEntityID(currentEntityID);
+                    slimeDataB.setTransformItems(transformItemsDataList);
                 }
             } else {
                 // The JSON array is empty, handle this case if needed
             }
         }
     }
+
 
 
     //</editor-fold>
@@ -373,73 +371,105 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="handleAppearance">
-    private static void handleAppearance(JsonObject jsonObject, int lineNumber, String currentEntityID, JsonArray jsonArray) {
+    private static void handleAppearance(JsonObject jsonObject, int lineNumber, String currentEntityID, List<SammieJamSlimeData> slimeDataList) {
         // Check if the JSON object has an "appearance" property
         JsonElement appearanceElement = jsonObject.get("appearance");
 
         if (appearanceElement == null || !appearanceElement.isJsonObject()) {
-            // Use the fallback appearance
-            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            // Use the fallback appearance if the "appearance" property is missing or not an object
+            SammieJamSlimeData fallbackSlimeData = createFallbackSlimeData(DEFAULT_SLIME_TEXTURE);
+
+            // Add the fallback SammieJamSlimeData object to the slimeDataList
+            slimeDataList.add(fallbackSlimeData);
         } else {
             // The "appearance" property exists and is an object
             JsonObject appearanceObject = appearanceElement.getAsJsonObject();
 
             // Check and validate the "type" property
             JsonElement typeElement = appearanceObject.get("type");
-            if (typeElement == null || !typeElement.isJsonPrimitive() || !typeElement.getAsJsonPrimitive().isString()) {
-                // Use the fallback appearance
-                setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
-            } else {
+            if (typeElement != null && typeElement.isJsonPrimitive() && typeElement.getAsJsonPrimitive().isString()) {
                 String type = typeElement.getAsString();
                 if (type.equals("texture")) {
-                    handleTextureAppearance(appearanceObject, lineNumber, currentEntityID, jsonObject);
+                    handleTextureAppearance(appearanceObject, lineNumber, currentEntityID, slimeDataList);
                 } else if (type.equals("color")) {
-                    handleColorAppearance(appearanceObject, lineNumber, currentEntityID, jsonObject);
+                    handleColorAppearance(appearanceObject, lineNumber, currentEntityID, slimeDataList);
                 } else {
                     // Unknown "type" value, use the fallback appearance
-                    setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+                    SammieJamSlimeData fallbackSlimeData = createFallbackSlimeData(DEFAULT_SLIME_TEXTURE);
+
+                    // Add the fallback SammieJamSlimeData object to the slimeDataList
+                    slimeDataList.add(fallbackSlimeData);
                 }
+            } else {
+                // "type" property is missing or not a string, use the fallback appearance
+                SammieJamSlimeData fallbackSlimeData = createFallbackSlimeData(DEFAULT_SLIME_TEXTURE);
+
+                // Add the fallback SammieJamSlimeData object to the slimeDataList
+                slimeDataList.add(fallbackSlimeData);
             }
         }
     }
+
+    private static SammieJamSlimeData createFallbackSlimeData(ResourceLocation fallbackTexture) {
+        SammieJamSlimeData fallbackSlimeData = new SammieJamSlimeData();
+
+        // Set the entityID to the fallbackSlimeData if needed
+        // fallbackSlimeData.setEntityID(currentEntityID);
+
+        // Set the appearance property in the fallbackSlimeData
+        JsonObject fallbackAppearance = new JsonObject();
+        fallbackAppearance.addProperty("type", "texture");
+        fallbackAppearance.addProperty("source", fallbackTexture.toString());
+        //fallbackSlimeData.setAppearance(fallbackAppearance);
+
+        return fallbackSlimeData;
+    }
+
+
 
 
     //</editor-fold>
 
     //<editor-fold desc="handleTextureAppearance">
-    private static void handleTextureAppearance(JsonObject appearanceObject, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+    private static void handleTextureAppearance(JsonObject appearanceObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         // Handle "texture" type
         JsonElement sourceElement = appearanceObject.get("source");
         if (sourceElement != null && sourceElement.isJsonPrimitive() && sourceElement.getAsString() != null) {
             String source = sourceElement.getAsString();
             // Validate and process the "source" value for "texture" type
-            if (!isValidTextureSource(source, lineNumber, currentEntityID, jsonObject)) {
+            if (!isValidTextureSource(source, lineNumber, currentEntityID, slimeDataB)) {
                 // Invalid source, fallback has already been set
                 return;
             }
-            // Process the valid source here
+            // Process the valid source here and update slimeDataB accordingly
         } else {
             LOGGER.warn("Line {}: 'source' property missing or invalid for 'texture' appearance. Skipping.", lineNumber);
         }
     }
-
     //</editor-fold>
 
     //<editor-fold desc="handleColorAppearance">
-    private static boolean handleColorAppearance(JsonObject appearanceObject, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+    private static boolean handleColorAppearance(JsonObject appearanceObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         // Handle "color" type
         JsonElement sourceElement = appearanceObject.get("source");
         if (sourceElement != null && sourceElement.isJsonArray()) {
             JsonArray colorArray = sourceElement.getAsJsonArray();
-            // Validate and process the "source" value for "color" type
-            return isValidColorSource(colorArray, lineNumber, currentEntityID, jsonObject);
+            // Validate and process the "source" value for "color" type and update slimeDataB accordingly
+            boolean isValidColorSource = isValidColorSource(colorArray, lineNumber, currentEntityID, slimeDataB);
+            if (!isValidColorSource) {
+                LOGGER.warn("Line {}: Invalid 'source' property for 'color' appearance. Using the fallback texture.", lineNumber);
+                // Use the fallback appearance for "color" type and update slimeDataB accordingly
+                setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
+            }
+            return isValidColorSource;
         } else {
             LOGGER.warn("Line {}: 'source' property missing or invalid for 'color' appearance. Using the fallback texture.", lineNumber);
-            // Use the fallback appearance for "color" type
-            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            // Use the fallback appearance for "color" type and update slimeDataB accordingly
+            setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
             return false;
         }
     }
+
 
     //</editor-fold>
 
@@ -630,28 +660,29 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="isValidTextureSource">
-    private static boolean isValidTextureSource(String source, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+    private static boolean isValidTextureSource(String source, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         if (!source.endsWith(".png") && !source.endsWith(".json")) {
             // The provided source does not have a '.png' or '.json' extension
             LOGGER.warn("Line {}: Invalid 'source' property format for 'texture' appearance for '{}'. Using the fallback texture.", lineNumber, currentEntityID);
-            // Use the fallback appearance for "texture" type
-            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            // Use the fallback appearance for "texture" type and update slimeDataB accordingly
+            setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
             return false;
         }
         return true;
     }
 
+
     //</editor-fold>
 
     //<editor-fold desc="isValidColorSource">
-    private static boolean isValidColorSource(JsonArray colorArray, int lineNumber, String currentEntityID, JsonObject jsonObject) {
+    private static boolean isValidColorSource(JsonArray colorArray, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         int numValues = colorArray.size();
 
         if (numValues < 1 || numValues > 4) {
             // Invalid number of values in the array
             LOGGER.warn("Line {}: Invalid 'source' property format for 'color' appearance. Using the fallback texture.", lineNumber);
-            // Use the fallback appearance for "color" type
-            setFallbackAppearance(jsonObject, DEFAULT_SLIME_TEXTURE);
+            // Use the fallback appearance for "color" type and update slimeDataB accordingly
+            setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
             return false;
         }
 
@@ -696,10 +727,11 @@ public class JSONFileLoader {
         float normalizedB = b / 255.0f;
         float normalizedA = a / 255.0f;
 
-        // Now you can use these normalized values as needed
+        // Now you can use these normalized values as needed and update slimeDataB accordingly
 
         return true; // Source is valid
     }
+
 
 
 
@@ -766,12 +798,22 @@ public class JSONFileLoader {
 
     ////////////////
 
-    private static void setFallbackAppearance(JsonObject jsonObject, ResourceLocation fallbackTexture) {
+    private static SammieJamSlimeData createFallbackAppearance(ResourceLocation fallbackTexture) {
         JsonObject fallbackAppearance = new JsonObject();
         fallbackAppearance.addProperty("type", "texture");
         fallbackAppearance.addProperty("source", fallbackTexture.toString());
-        jsonObject.add("appearance", fallbackAppearance);
+
+        // Create a new SammieJamSlimeData object with the fallback appearance
+        SammieJamSlimeData fallbackSlimeData = new SammieJamSlimeData();
+        fallbackSlimeData.setAppearance(fallbackAppearance);
+
+        return fallbackSlimeData;
     }
+
+
+
+
+
 
 
     // Here we grab all that nicely validated and parsed data and wrap it into a nice package for delivery to SammieJamSlimeData
