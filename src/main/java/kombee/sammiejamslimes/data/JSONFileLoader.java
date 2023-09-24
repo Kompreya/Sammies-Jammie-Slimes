@@ -3,6 +3,8 @@ package kombee.sammiejamslimes.data;
 import com.google.gson.*;
 
 import kombee.sammiejamslimes.SammieJamSlimes;
+import kombee.sammiejamslimes.utils.ItemMetaHelper;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.JsonToNBT;
 import net.minecraft.nbt.NBTException;
@@ -215,60 +217,104 @@ public class JSONFileLoader {
         // Check if the JSON object has a "displayName" property
         JsonElement displayNameElement = jsonObject.get("displayName");
 
-        if (displayNameElement != null && displayNameElement.isJsonPrimitive()) {
-            String currentDisplayName = displayNameElement.getAsString();
-            // Validate the displayName here
-            if (isValidDisplayName(currentDisplayName)) {
-                slimeDataB.setDisplayName(currentDisplayName); // Set the displayName in the slimeDataB variable
+        if (displayNameElement != null) {
+            if (displayNameElement.isJsonPrimitive()) {
+                String currentDisplayName = displayNameElement.getAsString();
+                // Validate the displayName here
+                if (isValidDisplayName(currentDisplayName)) {
+                    slimeDataB.setDisplayName(currentDisplayName); // Set the displayName in the slimeDataB variable
+                } else {
+                    LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Ignoring.", lineNumber, currentEntityID, currentDisplayName);
+                }
             } else {
-                LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Ignoring.", lineNumber, currentEntityID, currentDisplayName);
+                LOGGER.warn("Line {}: 'displayName' property has an invalid type for '{}'. Using empty string.", lineNumber, currentEntityID);
+                // Set the property to an empty string
+                slimeDataB.setDisplayName("");
             }
         } else {
-            LOGGER.warn("Line {}: 'displayName' property missing or invalid for '{}'. Ignoring.", lineNumber, currentEntityID);
+            LOGGER.warn("Line {}: 'displayName' property missing for '{}'. Using empty string.", lineNumber, currentEntityID);
+            // Set the property to an empty string
+            slimeDataB.setDisplayName("");
         }
     }
-
     //</editor-fold>
 
     //<editor-fold desc="handleSpawnEggColors">
     private static void handleSpawnEggColors(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
+        // Default colors
         String primaryColor = FALLBACK_PRIMARY_COLOR;
         String secondaryColor = FALLBACK_SECONDARY_COLOR;
 
         // Check if the JSON object has a "spawnEggColors" property
         JsonElement spawnEggColorsElement = jsonObject.get("spawnEggColors");
 
-        if (spawnEggColorsElement != null && spawnEggColorsElement.isJsonObject()) {
+        if (spawnEggColorsElement == null) {
+            // If the "spawnEggColors" property is missing, create it with default values
+            JsonObject defaultSpawnEggColors = new JsonObject();
+            defaultSpawnEggColors.addProperty("primary", FALLBACK_PRIMARY_COLOR);
+            defaultSpawnEggColors.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
+
+            // Set the spawnEggColors property in slimeDataB variable
+            slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+            LOGGER.warn("Line {}: 'spawnEggColors' property missing for '{}'. Using fallback colors.", lineNumber, currentEntityID);
+        } else if (spawnEggColorsElement.isJsonObject()) {
+            // The "spawnEggColors" property exists and is an object
             JsonObject spawnEggColorsJson = spawnEggColorsElement.getAsJsonObject();
-            JsonElement primaryElement = spawnEggColorsJson.get("primary");
-            JsonElement secondaryElement = spawnEggColorsJson.get("secondary");
 
-            // Validate primary color
-            if (primaryElement != null && primaryElement.isJsonPrimitive()) {
-                String primaryColorCandidate = primaryElement.getAsString();
-                if (isValidColor(primaryColorCandidate)) {
-                    primaryColor = primaryColorCandidate;
-                } else {
+            // Primary color
+            if (!spawnEggColorsJson.has("primary")) {
+                // If "primary" property is missing, create it with the default primary color
+                spawnEggColorsJson.addProperty("primary", FALLBACK_PRIMARY_COLOR);
+            } else if (!spawnEggColorsJson.get("primary").isJsonPrimitive() || !spawnEggColorsJson.get("primary").getAsJsonPrimitive().isString()) {
+                // If "primary" property is not a string, overwrite it with the default primary color
+                spawnEggColorsJson.addProperty("primary", FALLBACK_PRIMARY_COLOR);
+                LOGGER.warn("Line {}: 'primary' property has an invalid type for '{}' in '{}'. Using fallback primary color.", lineNumber, currentEntityID, spawnEggColorsJson.get("primary"));
+            } else {
+                // Validate and process the primary color here
+                String primaryColorCandidate = spawnEggColorsJson.get("primary").getAsString();
+                if (!isValidColor(primaryColorCandidate)) {
+                    // If primary color is invalid, overwrite it with the default primary color
+                    spawnEggColorsJson.addProperty("primary", FALLBACK_PRIMARY_COLOR);
                     LOGGER.warn("Line {}: Invalid primary color format for '{}' in '{}'. Using fallback primary color.", lineNumber, currentEntityID, primaryColorCandidate);
-                }
-            }
-
-            // Validate secondary color
-            if (secondaryElement != null && secondaryElement.isJsonPrimitive()) {
-                String secondaryColorCandidate = secondaryElement.getAsString();
-                if (isValidColor(secondaryColorCandidate)) {
-                    secondaryColor = secondaryColorCandidate;
                 } else {
-                    LOGGER.warn("Line {}: Invalid secondary color format for '{}' in '{}'. Using fallback secondary color.", lineNumber, currentEntityID, secondaryColorCandidate);
+                    primaryColor = primaryColorCandidate;
                 }
             }
-        } else {
-            LOGGER.warn("Line {}: 'spawnEggColors' property missing or invalid for '{}'. Using fallback colors.", lineNumber, currentEntityID);
-        }
 
-        // Set the spawnEggColors property in slimeDataB variable
-        slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+            // Secondary color
+            if (!spawnEggColorsJson.has("secondary")) {
+                // If "secondary" property is missing, create it with the default secondary color
+                spawnEggColorsJson.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
+            } else if (!spawnEggColorsJson.get("secondary").isJsonPrimitive() || !spawnEggColorsJson.get("secondary").getAsJsonPrimitive().isString()) {
+                // If "secondary" property is not a string, overwrite it with the default secondary color
+                spawnEggColorsJson.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
+                LOGGER.warn("Line {}: 'secondary' property has an invalid type for '{}' in '{}'. Using fallback secondary color.", lineNumber, currentEntityID, spawnEggColorsJson.get("secondary"));
+            } else {
+                // Validate and process the secondary color here
+                String secondaryColorCandidate = spawnEggColorsJson.get("secondary").getAsString();
+                if (!isValidColor(secondaryColorCandidate)) {
+                    // If secondary color is invalid, overwrite it with the default secondary color
+                    spawnEggColorsJson.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
+                    LOGGER.warn("Line {}: Invalid secondary color format for '{}' in '{}'. Using fallback secondary color.", lineNumber, currentEntityID, secondaryColorCandidate);
+                } else {
+                    secondaryColor = secondaryColorCandidate;
+                }
+            }
+
+            // Set the spawnEggColors property in slimeDataB variable
+            slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+        } else {
+            // The "spawnEggColors" property exists but is not an object, overwrite it with default values
+            JsonObject defaultSpawnEggColors = new JsonObject();
+            defaultSpawnEggColors.addProperty("primary", FALLBACK_PRIMARY_COLOR);
+            defaultSpawnEggColors.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
+
+            // Set the spawnEggColors property in slimeDataB variable
+            slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+            LOGGER.warn("Line {}: 'spawnEggColors' property has an invalid type for '{}'. Using fallback colors.", lineNumber, currentEntityID);
+        }
     }
+
     //</editor-fold>
 
     //<editor-fold desc="handleTransformItems">
@@ -279,25 +325,32 @@ public class JSONFileLoader {
         // Check if the JSON object has a "transformItems" property
         JsonElement transformItemsElement = jsonObject.get("transformItems");
 
-        if (transformItemsElement != null && transformItemsElement.isJsonArray()) {
-            JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
-            if (!transformItemsArray.isJsonNull() && transformItemsArray.size() > 0) {
-                // The JSON array is not empty, proceed with processing
-                List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement, metadata);
+        if (transformItemsElement != null) {
+            // Check if the "transformItems" property exists
 
-                if (currentEntityID != null) {
+            if (transformItemsElement.isJsonArray()) {
+                // The "transformItems" property exists and is an array
+                JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
+
+                if (!transformItemsArray.isJsonNull() && transformItemsArray.size() > 0) {
+                    // The JSON array is not empty, proceed with processing
+                    List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement, metadata);
+
                     // Set the properties of the existing SammieJamSlimeData instance (slimeDataB)
-                    slimeDataB.setEntityID(currentEntityID);
                     slimeDataB.setTransformItems(transformItemsDataList);
+                } else {
+                    // The JSON array is empty, handle this case if needed
                 }
             } else {
-                // The JSON array is empty, handle this case if needed
+                // The "transformItems" property exists but is not an array
+                // Set it to an empty array
+                transformItemsElement.getAsJsonObject().add("transformItems", new JsonArray());
             }
+        } else {
+            // The "transformItems" property does not exist, create it with an empty array
+            jsonObject.add("transformItems", new JsonArray());
         }
     }
-
-
-
     //</editor-fold>
 
     //<editor-fold desc="getTransformItems">
@@ -371,18 +424,14 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="handleAppearance">
-    private static void handleAppearance(JsonObject jsonObject, int lineNumber, String currentEntityID, List<SammieJamSlimeData> slimeDataList) {
+    private static void handleAppearance(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         // Check if the JSON object has an "appearance" property
         JsonElement appearanceElement = jsonObject.get("appearance");
 
-        if (appearanceElement == null || !appearanceElement.isJsonObject()) {
-            // Use the fallback appearance if the "appearance" property is missing or not an object
-            SammieJamSlimeData fallbackSlimeData = createFallbackSlimeData(DEFAULT_SLIME_TEXTURE);
+        // Create the fallback appearance object
+        JsonObject fallbackAppearance = createFallbackAppearance();
 
-            // Add the fallback SammieJamSlimeData object to the slimeDataList
-            slimeDataList.add(fallbackSlimeData);
-        } else {
-            // The "appearance" property exists and is an object
+        if (appearanceElement != null && appearanceElement.isJsonObject()) {
             JsonObject appearanceObject = appearanceElement.getAsJsonObject();
 
             // Check and validate the "type" property
@@ -390,40 +439,27 @@ public class JSONFileLoader {
             if (typeElement != null && typeElement.isJsonPrimitive() && typeElement.getAsJsonPrimitive().isString()) {
                 String type = typeElement.getAsString();
                 if (type.equals("texture")) {
-                    handleTextureAppearance(appearanceObject, lineNumber, currentEntityID, slimeDataList);
+                    handleTextureAppearance(appearanceObject, lineNumber, currentEntityID, slimeDataB);
+                    return; // No need to set fallback appearance if texture is handled
                 } else if (type.equals("color")) {
-                    handleColorAppearance(appearanceObject, lineNumber, currentEntityID, slimeDataList);
-                } else {
-                    // Unknown "type" value, use the fallback appearance
-                    SammieJamSlimeData fallbackSlimeData = createFallbackSlimeData(DEFAULT_SLIME_TEXTURE);
-
-                    // Add the fallback SammieJamSlimeData object to the slimeDataList
-                    slimeDataList.add(fallbackSlimeData);
+                    handleColorAppearance(appearanceObject, lineNumber, currentEntityID, slimeDataB);
+                    return; // No need to set fallback appearance if color is handled
                 }
-            } else {
-                // "type" property is missing or not a string, use the fallback appearance
-                SammieJamSlimeData fallbackSlimeData = createFallbackSlimeData(DEFAULT_SLIME_TEXTURE);
-
-                // Add the fallback SammieJamSlimeData object to the slimeDataList
-                slimeDataList.add(fallbackSlimeData);
             }
         }
+
+        // Set the appearance property in slimeDataB with fallback data
+        slimeDataB.setAppearance(fallbackAppearance);
     }
 
-    private static SammieJamSlimeData createFallbackSlimeData(ResourceLocation fallbackTexture) {
-        SammieJamSlimeData fallbackSlimeData = new SammieJamSlimeData();
-
-        // Set the entityID to the fallbackSlimeData if needed
-        // fallbackSlimeData.setEntityID(currentEntityID);
-
-        // Set the appearance property in the fallbackSlimeData
+    // Create the fallback appearance object
+    private static JsonObject createFallbackAppearance() {
         JsonObject fallbackAppearance = new JsonObject();
         fallbackAppearance.addProperty("type", "texture");
         fallbackAppearance.addProperty("source", fallbackTexture.toString());
-        //fallbackSlimeData.setAppearance(fallbackAppearance);
-
-        return fallbackSlimeData;
+        return fallbackAppearance;
     }
+
 
 
 
@@ -623,39 +659,16 @@ public class JSONFileLoader {
             return false;
         }
 
-        // Split the itemID using a colon to check for metadata
-        String[] itemData = itemID.split(":");
-        if (itemData.length < 2 || itemData.length > 3) {
+        Set<ItemStack> items = ItemMetaHelper.getFromString("item ID", itemID, true);
+
+        if (items.isEmpty()) {
             LOGGER.warn("Invalid item ID format for '{}'. Skipping.", itemID);
             return false;
         }
 
-        // Check if the item namespace and path are valid
-        ResourceLocation itemResourceLocation = new ResourceLocation(itemData[0], itemData[1]);
-        if (!ForgeRegistries.ITEMS.containsKey(itemResourceLocation)) {
-            LOGGER.warn("Invalid item ID format for '{}'. Namespace or path is not valid. Skipping.", itemID);
-            return false;
-        }
-
-        // Check if metadata is specified and if it's an integer
-        if (itemData.length == 3) {
-            String metaString = itemData[2];
-            if (!metaString.equals("*")) {
-                try {
-                    int meta = Integer.parseInt(metaString);
-                    if (meta < 0) {
-                        LOGGER.warn("Invalid metadata '{}' for item ID '{}'. Metadata must be a non-negative integer. Skipping.", meta, itemID);
-                        return false;
-                    }
-                } catch (NumberFormatException e) {
-                    LOGGER.warn("Invalid metadata format for item ID '{}'. Metadata must be a valid integer. Skipping.", itemID);
-                    return false;
-                }
-            }
-        }
-
         return true; // Valid item ID format
     }
+
 
     //</editor-fold>
 
@@ -798,17 +811,7 @@ public class JSONFileLoader {
 
     ////////////////
 
-    private static SammieJamSlimeData createFallbackAppearance(ResourceLocation fallbackTexture) {
-        JsonObject fallbackAppearance = new JsonObject();
-        fallbackAppearance.addProperty("type", "texture");
-        fallbackAppearance.addProperty("source", fallbackTexture.toString());
 
-        // Create a new SammieJamSlimeData object with the fallback appearance
-        SammieJamSlimeData fallbackSlimeData = new SammieJamSlimeData();
-        fallbackSlimeData.setAppearance(fallbackAppearance);
-
-        return fallbackSlimeData;
-    }
 
 
 

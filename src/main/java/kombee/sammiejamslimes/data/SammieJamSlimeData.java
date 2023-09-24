@@ -27,8 +27,6 @@ public class SammieJamSlimeData {
         return entityID;
     }
 
-    // Currently unused. Validation is being performed during parse. Modify this later based on needs of code handling entity IDs
-
     public void setEntityID(String entityID) {
         this.entityID = entityID;
     }
@@ -46,21 +44,7 @@ public class SammieJamSlimeData {
         return spawnEggColors;
     }
 
-    /*
-    public void setSpawnEggColors(JsonObject spawnEggColorsJson) {
-        // Validate the spawnEggColorsJson object
-        if (isValidSpawnEggColorsJson(spawnEggColorsJson)) {
-            // Extract and set the primary and secondary colors
-            this.spawnEggColors = new SpawnEggColors(
-                    spawnEggColorsJson.get("primary").getAsString(),
-                    spawnEggColorsJson.get("secondary").getAsString()
-            );
-        } else {
-            // Set default colors or handle the error as needed
-            this.spawnEggColors = new SpawnEggColors("FF0000", "00FF00");
-        }
-    }
-    */
+
     public void setSpawnEggColors(SpawnEggColors spawnEggColors) {
         this.spawnEggColors = spawnEggColors;
     }
