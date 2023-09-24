@@ -1,17 +1,12 @@
 package kombee.sammiejamslimes.data;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import kombee.sammiejamslimes.SammieJamSlimes;
 import net.minecraft.nbt.NBTTagCompound;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
 
 public class SammieJamSlimeData {
-    private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
     private String entityID;
     private String displayName;
     private SpawnEggColors spawnEggColors;
@@ -19,23 +14,35 @@ public class SammieJamSlimeData {
     private Appearance appearance;
     private TransformTo transformTo;
     private boolean spawningEnable;
-    private boolean entityIDError = false;
-    private boolean displayNameError = false;
 
-    // Getters and Setters for slime data
-    public String getEntityID() {
-        return entityID;
+    // Constructor to initialize fields
+    public SammieJamSlimeData(String entityID, String displayName, SpawnEggColors spawnEggColors,
+                              List<TransformItem> transformItems, Appearance appearance,
+                              TransformTo transformTo, boolean spawningEnable) {
+        this.entityID = entityID;
+        this.displayName = displayName;
+        this.spawnEggColors = spawnEggColors;
+        this.transformItems = transformItems;
+        this.appearance = appearance;
+        this.transformTo = transformTo;
+        this.spawningEnable = spawningEnable;
     }
 
-    public void setEntityID(String entityID) {
-        this.entityID = entityID;
+    public SammieJamSlimeData() {
+        this.entityID = "defaultEntityID";
+        this.displayName = "Default Display Name";
+        this.spawnEggColors = new SpawnEggColors("defaultPrimaryColor", "defaultSecondaryColor");
+    }
+
+    // Getters and setters for fields
+    public String getEntityID() {
+        return entityID;
     }
 
     public String getDisplayName() {
         return displayName;
     }
 
-    // Same as entityID. Revisit later. Validation occurs in parse.
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
     }
@@ -44,23 +51,24 @@ public class SammieJamSlimeData {
         return spawnEggColors;
     }
 
-
     public void setSpawnEggColors(SpawnEggColors spawnEggColors) {
         this.spawnEggColors = spawnEggColors;
     }
-
-
-    public void setTransformItems(List<TransformItem> transformItems) {
-        this.transformItems = transformItems;
-    }
-
 
     public List<TransformItem> getTransformItems() {
         return transformItems;
     }
 
+    public void setTransformItems(List<TransformItem> transformItems) {
+        this.transformItems = transformItems;
+    }
+
     public Appearance getAppearance() {
         return appearance;
+    }
+
+    public void setAppearance(Appearance appearance) {
+        this.appearance = appearance;
     }
 
     public TransformTo getTransformTo() {
@@ -79,11 +87,11 @@ public class SammieJamSlimeData {
         this.spawningEnable = spawningEnable;
     }
 
+    // Nested classes remain the same
     public static class SpawnEggColors {
         private String primary;
         private String secondary;
 
-        // Constructor that accepts primary and secondary colors
         public SpawnEggColors(String primary, String secondary) {
             this.primary = primary;
             this.secondary = secondary;
@@ -98,16 +106,15 @@ public class SammieJamSlimeData {
         }
     }
 
-
     public static class TransformItem {
         private String itemID;
-        private int metadata; // Metadata field
+        private int metadata;
         private boolean consumeItem;
         private boolean reduceDurability;
-        private NBTTagCompound nbtData; // New field for NBT data
+        private NBTTagCompound nbtData;
 
-        // Constructor with metadata and NBT data parameters
-        public TransformItem(String itemID, int metadata, boolean consumeItem, boolean reduceDurability, NBTTagCompound nbtData) {
+        public TransformItem(String itemID, int metadata, boolean consumeItem,
+                             boolean reduceDurability, NBTTagCompound nbtData) {
             this.itemID = itemID;
             this.metadata = metadata;
             this.consumeItem = consumeItem;
@@ -115,7 +122,6 @@ public class SammieJamSlimeData {
             this.nbtData = nbtData;
         }
 
-        // Getters for all fields
         public String getItemID() {
             return itemID;
         }
@@ -136,7 +142,6 @@ public class SammieJamSlimeData {
             return nbtData;
         }
     }
-
 
     public static class Appearance {
         private String type;
@@ -171,7 +176,4 @@ public class SammieJamSlimeData {
             this.list = list;
         }
     }
-
-
-
 }
