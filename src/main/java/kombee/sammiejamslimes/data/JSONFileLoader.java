@@ -59,9 +59,9 @@ public class JSONFileLoader {
             // Attempt to parse the entire content as a JSON array
             String jsonContent = jsonContentBuilder.toString();
             JsonArray jsonArray = jsonParser.parse(jsonContent).getAsJsonArray();
-            SammieJamSlimeData slimeData = null;
+            SammieJamSlimeData slimeDataA;
 
-            int i = 0; // Initialize index outside the loop
+            int i = 0; // Initialize index
             int iterationsWithoutProgress = 0; // Track iterations without progress
 
             // Collect Valid EntityIDs in the order of their occurrence
@@ -81,8 +81,8 @@ public class JSONFileLoader {
 
                     if (currentEntityID != null) {
                         // Valid entityID, create a new slimeData instance
-                        slimeData = new SammieJamSlimeData();
-                        slimeData.setEntityID(currentEntityID);
+                        slimeDataA = new SammieJamSlimeData();
+                        slimeDataA.setEntityID(currentEntityID);
 
                         // Add the valid entityID to the encounteredEntityIDs set
                         encounteredEntityIDs.add(currentEntityID);
@@ -90,8 +90,8 @@ public class JSONFileLoader {
                         // Add the entityID to the list in the order of occurrence
                         entityIDList.add(currentEntityID);
 
-                        // Add the slimeData object to the list
-                        slimeDataList.add(slimeData);
+                        // Add the slimeDataA object to the list
+                        slimeDataList.add(slimeDataA);
                     } else {
                         // Invalid or missing entityID, skip this object
                         i++; // Increment the index and continue to the next element
@@ -135,31 +135,27 @@ public class JSONFileLoader {
                 // Handle appearance property
                 handleAppearance(jsonObject, lineNumber, currentEntityID, jsonArray);
 
-                // Within your main parsing loop
+                // Handle transformTo property
                 handleTransformTo(jsonObject, lineNumber, currentEntityID, SlimeDataB, encounteredEntityIDs);
                 LOGGER.debug("Finished processing 'transformTo' property.");
 
+                // Handle spawningEnable property
                 boolean spawningEnable = handleSpawningEnable(jsonObject, lineNumber, currentEntityID);
                 LOGGER.debug("Finished processing JSON object for entity ID: {}", currentEntityID);
             }
-
-
-
-
 
             // Create an array from the list of SammieJamSlimeData
             SammieJamSlimeData[] slimeDataArray = slimeDataList.toArray(new SammieJamSlimeData[0]);
             return slimeDataArray;
         } catch (IOException e) {
             LOGGER.error("Error reading file: {}", filePath);
-            e.printStackTrace(); // Handle the exception appropriately
+            e.printStackTrace();
         } catch (JsonParseException e) {
             LOGGER.error("Error parsing JSON content: {}", e.getMessage());
-            e.printStackTrace(); // Handle the exception appropriately
+            e.printStackTrace();
         }
 
         LOGGER.debug("Finished JSON parsing loop.");
-
         // Return null if there was an error
         return null;
     }
@@ -170,7 +166,7 @@ public class JSONFileLoader {
                 return SlimeDataB;
             }
         }
-        // If the entityID is not found, you can handle it here, e.g., by creating a new instance.
+        // If the entityID is not found, handle it here, e.g., by creating a new instance.
         return new SammieJamSlimeData();
     }
 
@@ -181,16 +177,14 @@ public class JSONFileLoader {
             if (jsonElement.isJsonObject()) {
                 JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-                // Handle entityID property
-                String currentEntityID = handleEntityID(jsonObject, lineNumber);
-
-                if (currentEntityID != null && currentEntityID.equals(entityID)) {
+                if (entityID.equals(jsonObject.get("entityID").getAsString())) {
                     return jsonObject; // Found the matching JSON object
                 }
             }
         }
         return null; // Entity ID not found in the JSON array
     }
+
 
 
     // HANDLERS //
@@ -272,7 +266,7 @@ public class JSONFileLoader {
             LOGGER.warn("Line {}: 'spawnEggColors' property missing or invalid for '{}'. Using fallback colors.", lineNumber, currentEntityID);
         }
 
-        // Set the spawnEggColors property in your SammieJamSlimeData instance
+        // Set the spawnEggColors property in SammieJamSlimeData instance
         slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
     }
     //</editor-fold>
@@ -280,7 +274,7 @@ public class JSONFileLoader {
     //<editor-fold desc="handleTransformItems">
     private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, List<SammieJamSlimeData> slimeDataList) {
         // Define and initialize the metadata variable if it's applicable
-        int metadata = 0; // Initialize with a default value or whatever is appropriate
+        int metadata = 0; // Initialize with a default value
 
         // Check if the JSON object has a "transformItems" property
         JsonElement transformItemsElement = jsonObject.get("transformItems");
@@ -325,17 +319,17 @@ public class JSONFileLoader {
 
                     // Continue processing only if itemID is valid
                     if (isValidItemID(itemID)) {
-                        // Extract and validate the "consumeItem" property (optional)
+                        // Extract and validate the "consumeItem" property
                         boolean consumeItem = getBooleanOrDefault(itemObject, "consumeItem", FALLBACK_CONSUME_ITEM);
 
-                        // Extract and validate the "reduceDurability" property (optional)
+                        // Extract and validate the "reduceDurability" property
                         boolean reduceDurability = getBooleanOrDefault(itemObject, "reduceDurability", FALLBACK_REDUCE_DURABILITY);
 
-                        // Extract and validate the "nbt" property (optional)
+                        // Extract and validate the "nbt" property
                         JsonElement nbtElement = itemObject.get("nbt");
                         NBTTagCompound nbtCompound = null; // Initialize as null
                         if (nbtElement != null && nbtElement.isJsonObject()) {
-                            // The "nbt" property exists and is an object, so you can proceed to parse and validate it
+                            // The "nbt" property exists and is an object, proceed to parse and validate it
                             JsonObject nbtObject = nbtElement.getAsJsonObject();
                             String nbtString = nbtObject.toString();
 
@@ -423,9 +417,7 @@ public class JSONFileLoader {
                 // Invalid source, fallback has already been set
                 return;
             }
-
             // Process the valid source here
-            // ...
         } else {
             LOGGER.warn("Line {}: 'source' property missing or invalid for 'texture' appearance. Skipping.", lineNumber);
         }
