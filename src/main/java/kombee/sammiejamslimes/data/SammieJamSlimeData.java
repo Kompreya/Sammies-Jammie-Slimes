@@ -179,12 +179,20 @@ public class SammieJamSlimeData {
             return type;
         }
 
+        public void setType(String type) {
+            this.type = type;
+        }
+
         public Object getSource() {
             return source;
         }
 
+        public void setSource(Object source) {
+            this.source = source;
+        }
+
         // Helper method to set the default source based on the type
-        private Object getDefaultSourceForType(String type) {
+        public Object getDefaultSourceForType(String type) {
             if ("texture".equals(type)) {
                 return "minecraft:slime"; // Default texture path
             } else if ("color".equals(type)) {

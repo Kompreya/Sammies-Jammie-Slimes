@@ -139,10 +139,9 @@ public class JSONFileLoader {
 
                 // Handle transformTo property
                 handleTransformTo(jsonObject, lineNumber, currentEntityID, slimeDataB, encounteredEntityIDs);
-                LOGGER.debug("Finished processing 'transformTo' property.");
 
                 // Handle spawningEnable property
-                boolean spawningEnable = handleSpawningEnable(jsonObject, lineNumber, currentEntityID);
+                handleSpawningEnable(jsonObject, lineNumber, slimeDataB);
                 LOGGER.debug("Finished processing JSON object for entity ID: {}", currentEntityID);
             }
             //</editor-fold>
@@ -271,9 +270,7 @@ public class JSONFileLoader {
 
     //<editor-fold desc="handleTransformItems">
     private static void handleTransformItems(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
-        // Define and initialize the metadata variable if it's applicable
-        int metadata = 0; // Initialize with a default value
-
+        int metadata = 0;
         // Check if the JSON object has a "transformItems" property
         JsonElement transformItemsElement = jsonObject.get("transformItems");
 
@@ -284,25 +281,21 @@ public class JSONFileLoader {
                 // The "transformItems" property exists and is an array
                 JsonArray transformItemsArray = transformItemsElement.getAsJsonArray();
 
-                if (!transformItemsArray.isJsonNull() && transformItemsArray.size() > 0) {
-                    // The JSON array is not empty, proceed with processing
-                    List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsElement, metadata);
+                List<SammieJamSlimeData.TransformItem> transformItemsDataList = getTransformItems(transformItemsArray, metadata);
 
-                    // Set the properties of the existing SammieJamSlimeData instance (slimeDataB)
-                    slimeDataB.setTransformItems(transformItemsDataList);
-                } else {
-                    // The JSON array is empty, handle this case if needed
-                }
+                // Set the properties of the existing SammieJamSlimeData instance (slimeDataB)
+                slimeDataB.setTransformItems(transformItemsDataList);
+
+                LOGGER.info("Line {}: Successfully parsed 'transformItems' for '{}'.", lineNumber, currentEntityID);
             } else {
-                // The "transformItems" property exists but is not an array
-                // Set it to an empty array
-                transformItemsElement.getAsJsonObject().add("transformItems", new JsonArray());
+                LOGGER.warn("Line {}: 'transformItems' property exists but is not an array for '{}'. Using default value.", lineNumber, currentEntityID);
             }
         } else {
-            // The "transformItems" property does not exist, create it with an empty array
-            jsonObject.add("transformItems", new JsonArray());
+            LOGGER.info("Line {}: 'transformItems' property missing for '{}'. Using default value.", lineNumber, currentEntityID);
         }
     }
+
+
     //</editor-fold>
 
     //<editor-fold desc="getTransformItems">
@@ -323,10 +316,10 @@ public class JSONFileLoader {
                     // Continue processing only if itemID is valid
                     if (isValidItemID(itemID)) {
                         // Extract and validate the "consumeItem" property
-                        boolean consumeItem = getBooleanOrDefault(itemObject, "consumeItem", FALLBACK_CONSUME_ITEM);
+                        boolean consumeItem = getBooleanOrDefault(itemObject, "consumeItem", true);
 
                         // Extract and validate the "reduceDurability" property
-                        boolean reduceDurability = getBooleanOrDefault(itemObject, "reduceDurability", FALLBACK_REDUCE_DURABILITY);
+                        boolean reduceDurability = getBooleanOrDefault(itemObject, "reduceDurability", false);
 
                         // Extract and validate the "nbt" property
                         JsonElement nbtElement = itemObject.get("nbt");
@@ -364,14 +357,12 @@ public class JSONFileLoader {
     //</editor-fold>
 
     //<editor-fold desc="getBooleanOrDefault">
-    private static boolean getBooleanOrDefault(JsonObject jsonObject, String propertyName, boolean fallback) {
+    private static boolean getBooleanOrDefault(JsonObject jsonObject, String propertyName, boolean defaultValue) {
         JsonElement propertyElement = jsonObject.get(propertyName);
         if (propertyElement != null && propertyElement.isJsonPrimitive() && propertyElement.getAsJsonPrimitive().isBoolean()) {
             return propertyElement.getAsBoolean();
-        } else {
-            LOGGER.warn("Invalid '{}' property format or missing. Using the fallback value.", propertyName);
-            return fallback;
         }
+        return defaultValue;
     }
     //</editor-fold>
 
@@ -379,9 +370,6 @@ public class JSONFileLoader {
     private static void handleAppearance(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         // Check if the JSON object has an "appearance" property
         JsonElement appearanceElement = jsonObject.get("appearance");
-
-        // Create the fallback appearance object
-        JsonObject fallbackAppearance = createFallbackAppearance();
 
         if (appearanceElement != null && appearanceElement.isJsonObject()) {
             JsonObject appearanceObject = appearanceElement.getAsJsonObject();
@@ -399,22 +387,8 @@ public class JSONFileLoader {
                 }
             }
         }
-
-        // Set the appearance property in slimeDataB with fallback data
-        slimeDataB.setAppearance(fallbackAppearance);
+        // If no valid appearance is found, it will automatically use the default appearance from the data class.
     }
-
-    // Create the fallback appearance object
-    private static JsonObject createFallbackAppearance() {
-        JsonObject fallbackAppearance = new JsonObject();
-        fallbackAppearance.addProperty("type", "texture");
-        fallbackAppearance.addProperty("source", fallbackTexture.toString());
-        return fallbackAppearance;
-    }
-
-
-
-
 
     //</editor-fold>
 
@@ -426,12 +400,16 @@ public class JSONFileLoader {
             String source = sourceElement.getAsString();
             // Validate and process the "source" value for "texture" type
             if (!isValidTextureSource(source, lineNumber, currentEntityID, slimeDataB)) {
-                // Invalid source, fallback has already been set
-                return;
+                // Invalid source, set the default texture source
+                slimeDataB.getAppearance().setSource(slimeDataB.getAppearance().getDefaultSourceForType("texture"));
+            } else {
+                // Process the valid source here and update slimeDataB accordingly
+                slimeDataB.getAppearance().setSource(source);
             }
-            // Process the valid source here and update slimeDataB accordingly
         } else {
-            LOGGER.warn("Line {}: 'source' property missing or invalid for 'texture' appearance. Skipping.", lineNumber);
+            LOGGER.warn("Line {}: 'source' property missing or invalid for 'texture' appearance. Using the fallback texture.", lineNumber);
+            // Set the default texture source
+            slimeDataB.getAppearance().setSource(slimeDataB.getAppearance().getDefaultSourceForType("texture"));
         }
     }
     //</editor-fold>
@@ -440,97 +418,92 @@ public class JSONFileLoader {
     private static boolean handleColorAppearance(JsonObject appearanceObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
         // Handle "color" type
         JsonElement sourceElement = appearanceObject.get("source");
+
         if (sourceElement != null && sourceElement.isJsonArray()) {
             JsonArray colorArray = sourceElement.getAsJsonArray();
+
             // Validate and process the "source" value for "color" type and update slimeDataB accordingly
             boolean isValidColorSource = isValidColorSource(colorArray, lineNumber, currentEntityID, slimeDataB);
+
             if (!isValidColorSource) {
                 LOGGER.warn("Line {}: Invalid 'source' property for 'color' appearance. Using the fallback texture.", lineNumber);
-                // Use the fallback appearance for "color" type and update slimeDataB accordingly
-                setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
-            }
-            return isValidColorSource;
-        } else {
-            LOGGER.warn("Line {}: 'source' property missing or invalid for 'color' appearance. Using the fallback texture.", lineNumber);
-            // Use the fallback appearance for "color" type and update slimeDataB accordingly
-            setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
-            return false;
-        }
-    }
 
+                // Use the default color source
+                slimeDataB.getAppearance().setSource(slimeDataB.getAppearance().getDefaultSourceForType("color"));
+            } else {
+                // Update the "type" property to reflect "color"
+                slimeDataB.getAppearance().setType("color");
+
+                // Update the "source" property with the valid color array
+                slimeDataB.getAppearance().setSource(colorArray);
+            }
+
+            return isValidColorSource;
+        }
+
+        return false;
+    }
 
     //</editor-fold>
 
     //<editor-fold desc="handleTransformTo">
-    private static void handleTransformTo(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeData, Set<String> encounteredEntityIDs) {
+    private static void handleTransformTo(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB, Set<String> encounteredEntityIDs) {
         // Check if the "transformTo" property exists in the JSON object
         JsonElement transformToElement = jsonObject.get("transformTo");
 
         if (transformToElement == null || !transformToElement.isJsonObject()) {
-            // "transformTo" property is missing or not an object, supply defaults
-            LOGGER.warn("Line {}: Missing or invalid 'transformTo' property for '{}'. Defaulting to a listType of 'blacklist' with an empty list array.", lineNumber, currentEntityID);
-
-            // Set the default values
-            JsonObject defaultTransformTo = new JsonObject();
-            defaultTransformTo.addProperty("listType", "blacklist");
-            defaultTransformTo.add("list", new JsonArray()); // An empty list
-            jsonObject.add("transformTo", defaultTransformTo);
+            // "transformTo" property is missing or not an object, log a warning
+            LOGGER.warn("Line {}: Missing or invalid 'transformTo' property for '{}'. Default values from the data class will be used.", lineNumber, currentEntityID);
         } else {
             // The "transformTo" property exists and is an object
             JsonObject transformToObject = transformToElement.getAsJsonObject();
 
             // Extract the "listType" property
-            boolean listType = isValidListType(transformToObject, lineNumber, currentEntityID);
+            String listType = transformToObject.has("listType") ? transformToObject.get("listType").getAsString() : slimeDataB.getTransformTo().getListType();
 
-            if (!listType) {
-                // Log a warning for invalid "listType" property and set default
-                LOGGER.warn("Line {}: Invalid 'listType' value for '{}' in 'transformTo'. Using fallback (blacklist).", lineNumber, currentEntityID);
-
-                // Set the default listType value
-                transformToObject.addProperty("listType", "blacklist");
+            // Validate and set the listType to the default if invalid
+            if (!isValidListType(transformToObject, lineNumber, currentEntityID)) {
+                listType = slimeDataB.getTransformTo().getListType();
             }
 
             // Extract or create the "list" property
             JsonElement listElement = transformToObject.get("list");
             if (listElement == null || !listElement.isJsonArray()) {
-                LOGGER.warn("Line {}: Missing or invalid 'transformTo' 'list' property. Using empty list.", lineNumber);
+                LOGGER.warn("Line {}: Missing or invalid 'transformTo' 'list' property. Using the default list from the data class.", lineNumber);
+            } else {
+                // Call isValidList to validate and populate the list
+                JsonArray listArray = transformToObject.getAsJsonArray("list");
+                List<String> list = isValidList(listArray, lineNumber, currentEntityID, encounteredEntityIDs);
 
-                // Set the default list as an empty array
-                transformToObject.add("list", new JsonArray());
-            } else if (!listElement.isJsonArray()) {
-                // Log a warning for invalid "list" property and replace with an empty array
-                LOGGER.warn("Line {}: Invalid 'transformTo' 'list' property. Using empty list.", lineNumber);
+                // Remove and re-add the list property to ensure proper JSON formatting
                 transformToObject.remove("list");
-                transformToObject.add("list", new JsonArray());
-            }
+                for (String entityID : list) {
+                    listArray.add(entityID);
+                }
 
-            // Call isValidList to validate and populate the list
-            JsonArray listArray = transformToObject.getAsJsonArray("list");
-            List<String> list = isValidList(listArray, lineNumber, currentEntityID, encounteredEntityIDs);
-
-            // Remove and re-add the list property to ensure proper JSON formatting
-            transformToObject.remove("list");
-            for (String entityID : list) {
-                listArray.add(entityID);
+                // Update the transformTo properties of slimeDataB
+                slimeDataB.getTransformTo().setListType(listType);
+                slimeDataB.getTransformTo().setList(list);
             }
-            transformToObject.add("list", listArray);
         }
     }
+
     //</editor-fold>
 
     //<editor-fold desc="handleSpawningEnable">
-    private static boolean handleSpawningEnable(JsonObject jsonObject, int lineNumber, String currentEntityID) {
+    private static void handleSpawningEnable(JsonObject jsonObject, int lineNumber, SammieJamSlimeData slimeDataB) {
         // Check if the "spawningEnable" property exists in the JSON object
         JsonElement spawningEnableElement = jsonObject.get("spawningEnable");
 
         if (spawningEnableElement != null && spawningEnableElement.isJsonPrimitive()) {
             boolean spawningEnable = spawningEnableElement.getAsBoolean();
-            return spawningEnable;
+            // Update the value in slimeDataB directly
+            slimeDataB.setSpawningEnable(spawningEnable);
         } else {
             // Log a warning for missing or invalid "spawningEnable" property
             LOGGER.warn("Line {}: Missing or invalid 'spawningEnable' property. Defaulting to 'true'.", lineNumber);
-            // Return true as the default value
-            return true;
+            // Set the default value in slimeDataB
+            slimeDataB.setSpawningEnable(true);
         }
     }
     //</editor-fold>
@@ -629,14 +602,10 @@ public class JSONFileLoader {
         if (!source.endsWith(".png") && !source.endsWith(".json")) {
             // The provided source does not have a '.png' or '.json' extension
             LOGGER.warn("Line {}: Invalid 'source' property format for 'texture' appearance for '{}'. Using the fallback texture.", lineNumber, currentEntityID);
-            // Use the fallback appearance for "texture" type and update slimeDataB accordingly
-            setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
             return false;
         }
         return true;
     }
-
-
     //</editor-fold>
 
     //<editor-fold desc="isValidColorSource">
@@ -646,8 +615,6 @@ public class JSONFileLoader {
         if (numValues < 1 || numValues > 4) {
             // Invalid number of values in the array
             LOGGER.warn("Line {}: Invalid 'source' property format for 'color' appearance. Using the fallback texture.", lineNumber);
-            // Use the fallback appearance for "color" type and update slimeDataB accordingly
-            setFallbackAppearance(slimeDataB, DEFAULT_SLIME_TEXTURE);
             return false;
         }
 
@@ -700,6 +667,7 @@ public class JSONFileLoader {
 
 
 
+
     //</editor-fold>
 
     //<editor-fold desc="isValidListType">
@@ -719,12 +687,8 @@ public class JSONFileLoader {
             // Log a warning for missing or invalid "listType" property
             LOGGER.warn("Line {}: Missing or invalid 'listType' property in 'transformTo'. Using fallback (blacklist).", lineNumber);
         }
-
-        // Return false only if you are sure that "blacklist" should be the default behavior.
-        // Otherwise, consider returning true as a safe default.
         return false;
     }
-
 
     //</editor-fold>
 
@@ -755,45 +719,10 @@ public class JSONFileLoader {
                 LOGGER.warn("Line {}: Invalid entity ID format in 'transformTo' 'list' array. Skipping.", lineNumber);
             }
         }
-
         return list;
     }
     //</editor-fold>
 
 
     ////////////////
-
-
-
-
-
-
-
-
-
-
-    private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList, String listType, List<String> list, boolean spawningEnable) {
-        SammieJamSlimeData slimeData = new SammieJamSlimeData();
-        slimeData.setEntityID(currentEntityID);
-        if (currentDisplayName != null) {
-            slimeData.setDisplayName(currentDisplayName);
-        }
-        slimeData.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
-        slimeData.setTransformItems(transformItemsDataList);
-
-        // Create and set the TransformTo object
-        SammieJamSlimeData.TransformTo transformTo = new SammieJamSlimeData.TransformTo();
-        transformTo.setListType(listType);
-        transformTo.setList(list);
-
-        slimeData.setTransformTo(transformTo); // Set the transformTo property
-        slimeData.setSpawningEnable(spawningEnable); // Set the spawningEnable property
-
-        return slimeData;
-    }
-
-
-
-
-
 }
