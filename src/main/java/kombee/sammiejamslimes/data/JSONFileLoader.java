@@ -17,7 +17,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraft.util.ResourceLocation;
 
 public class JSONFileLoader {
@@ -69,7 +68,7 @@ public class JSONFileLoader {
             // Collect Valid EntityIDs in the order of their occurrence
             List<String> entityIDList = new ArrayList<>();
 
-            //<editor-fold desc="First Pass.">
+            //<editor-fold desc="First Pass">
             // First Pass - Collect Valid EntityIDs
             int lineNumber = 0;
             while (i < jsonArray.size() && iterationsWithoutProgress < jsonArray.size()) {
@@ -111,6 +110,7 @@ public class JSONFileLoader {
             }
             //</editor-fold>
 
+            //<editor-fold desc="Second Pass">
             // Second Pass - Process Remaining Properties
             lineNumber = 0;
             for (String currentEntityID : entityIDList) {
@@ -145,6 +145,7 @@ public class JSONFileLoader {
                 boolean spawningEnable = handleSpawningEnable(jsonObject, lineNumber, currentEntityID);
                 LOGGER.debug("Finished processing JSON object for entity ID: {}", currentEntityID);
             }
+            //</editor-fold>
 
             // Create an array from the list of SammieJamSlimeData
             SammieJamSlimeData[] slimeDataArray = slimeDataList.toArray(new SammieJamSlimeData[0]);
@@ -162,6 +163,7 @@ public class JSONFileLoader {
         return null;
     }
 
+    //<editor-fold desc="Second Pass Utils">
     private static SammieJamSlimeData findSammieJamSlimeDataInList(String entityID, List<SammieJamSlimeData> slimeDataList) {
         for (SammieJamSlimeData slimeDataB : slimeDataList) {
             if (slimeDataB.getEntityID().equals(entityID)) {
@@ -186,6 +188,7 @@ public class JSONFileLoader {
         }
         return null; // Entity ID not found in the JSON array
     }
+    //</editor-fold>
 
 
 
@@ -195,20 +198,19 @@ public class JSONFileLoader {
     private static String handleEntityID(JsonObject jsonObject, int lineNumber) {
         JsonElement entityIDElement = jsonObject.get("entityID");
 
-        if (entityIDElement != null && entityIDElement.isJsonPrimitive() && entityIDElement.getAsString() != null) {
+        if (entityIDElement != null && entityIDElement.isJsonPrimitive()) {
             String currentEntityID = entityIDElement.getAsString();
 
-            // Validate the entityID format
-            if (!isValidEntityID(currentEntityID)) {
+            if (isValidEntityID(currentEntityID)) {
+                return currentEntityID;
+            } else {
                 LOGGER.error("Line {}: Invalid entityID format for '{}': {}. Skipping.", lineNumber, currentEntityID, jsonObject.toString());
-                return null; // Return null for invalid entityID
             }
-
-            return currentEntityID;
         } else {
             LOGGER.warn("Line {}: JSON object missing or has an invalid 'entityID' property. Skipping.", lineNumber);
-            return null; // Return null for missing or invalid entityID
         }
+
+        return null;
     }
     //</editor-fold>
 
@@ -217,103 +219,53 @@ public class JSONFileLoader {
         // Check if the JSON object has a "displayName" property
         JsonElement displayNameElement = jsonObject.get("displayName");
 
-        if (displayNameElement != null) {
-            if (displayNameElement.isJsonPrimitive()) {
-                String currentDisplayName = displayNameElement.getAsString();
-                // Validate the displayName here
-                if (isValidDisplayName(currentDisplayName)) {
-                    slimeDataB.setDisplayName(currentDisplayName); // Set the displayName in the slimeDataB variable
-                } else {
-                    LOGGER.warn("Line {}: Invalid displayName format for '{}': {}. Ignoring.", lineNumber, currentEntityID, currentDisplayName);
-                }
+        if (displayNameElement != null && displayNameElement.isJsonPrimitive()) {
+            String currentDisplayName = displayNameElement.getAsString();
+            // Validate the displayName here
+            if (isValidDisplayName(currentDisplayName)) {
+                slimeDataB.setDisplayName(currentDisplayName); // Set the displayName in the slimeDataB variable
             } else {
-                LOGGER.warn("Line {}: 'displayName' property has an invalid type for '{}'. Using empty string.", lineNumber, currentEntityID);
-                // Set the property to an empty string
-                slimeDataB.setDisplayName("");
+                LOGGER.warn("Line {}: Invalid displayName format for '{}': '{}'. Using the default value from the data class.", lineNumber, currentEntityID, currentDisplayName);
             }
         } else {
-            LOGGER.warn("Line {}: 'displayName' property missing for '{}'. Using empty string.", lineNumber, currentEntityID);
-            // Set the property to an empty string
-            slimeDataB.setDisplayName("");
+            LOGGER.info("Line {}: 'displayName' property missing or has an invalid type for '{}'. Using the default value from the data class.", lineNumber, currentEntityID);
         }
     }
     //</editor-fold>
 
     //<editor-fold desc="handleSpawnEggColors">
     private static void handleSpawnEggColors(JsonObject jsonObject, int lineNumber, String currentEntityID, SammieJamSlimeData slimeDataB) {
-        // Default colors
-        String primaryColor = FALLBACK_PRIMARY_COLOR;
-        String secondaryColor = FALLBACK_SECONDARY_COLOR;
-
         // Check if the JSON object has a "spawnEggColors" property
         JsonElement spawnEggColorsElement = jsonObject.get("spawnEggColors");
 
-        if (spawnEggColorsElement == null) {
-            // If the "spawnEggColors" property is missing, create it with default values
-            JsonObject defaultSpawnEggColors = new JsonObject();
-            defaultSpawnEggColors.addProperty("primary", FALLBACK_PRIMARY_COLOR);
-            defaultSpawnEggColors.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
-
-            // Set the spawnEggColors property in slimeDataB variable
-            slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
-            LOGGER.warn("Line {}: 'spawnEggColors' property missing for '{}'. Using fallback colors.", lineNumber, currentEntityID);
-        } else if (spawnEggColorsElement.isJsonObject()) {
+        if (spawnEggColorsElement != null && spawnEggColorsElement.isJsonObject()) {
             // The "spawnEggColors" property exists and is an object
             JsonObject spawnEggColorsJson = spawnEggColorsElement.getAsJsonObject();
 
             // Primary color
-            if (!spawnEggColorsJson.has("primary")) {
-                // If "primary" property is missing, create it with the default primary color
-                spawnEggColorsJson.addProperty("primary", FALLBACK_PRIMARY_COLOR);
-            } else if (!spawnEggColorsJson.get("primary").isJsonPrimitive() || !spawnEggColorsJson.get("primary").getAsJsonPrimitive().isString()) {
-                // If "primary" property is not a string, overwrite it with the default primary color
-                spawnEggColorsJson.addProperty("primary", FALLBACK_PRIMARY_COLOR);
-                LOGGER.warn("Line {}: 'primary' property has an invalid type for '{}' in '{}'. Using fallback primary color.", lineNumber, currentEntityID, spawnEggColorsJson.get("primary"));
-            } else {
-                // Validate and process the primary color here
-                String primaryColorCandidate = spawnEggColorsJson.get("primary").getAsString();
-                if (!isValidColor(primaryColorCandidate)) {
-                    // If primary color is invalid, overwrite it with the default primary color
-                    spawnEggColorsJson.addProperty("primary", FALLBACK_PRIMARY_COLOR);
-                    LOGGER.warn("Line {}: Invalid primary color format for '{}' in '{}'. Using fallback primary color.", lineNumber, currentEntityID, primaryColorCandidate);
-                } else {
-                    primaryColor = primaryColorCandidate;
-                }
-            }
+            String primaryColor = spawnEggColorsJson.has("primary") ? spawnEggColorsJson.get("primary").getAsString() : null;
 
             // Secondary color
-            if (!spawnEggColorsJson.has("secondary")) {
-                // If "secondary" property is missing, create it with the default secondary color
-                spawnEggColorsJson.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
-            } else if (!spawnEggColorsJson.get("secondary").isJsonPrimitive() || !spawnEggColorsJson.get("secondary").getAsJsonPrimitive().isString()) {
-                // If "secondary" property is not a string, overwrite it with the default secondary color
-                spawnEggColorsJson.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
-                LOGGER.warn("Line {}: 'secondary' property has an invalid type for '{}' in '{}'. Using fallback secondary color.", lineNumber, currentEntityID, spawnEggColorsJson.get("secondary"));
+            String secondaryColor = spawnEggColorsJson.has("secondary") ? spawnEggColorsJson.get("secondary").getAsString() : null;
+
+            // Validate and process the primary color
+            if (primaryColor != null && isValidColor(primaryColor)) {
+                slimeDataB.getSpawnEggColors().setPrimary(primaryColor);
             } else {
-                // Validate and process the secondary color here
-                String secondaryColorCandidate = spawnEggColorsJson.get("secondary").getAsString();
-                if (!isValidColor(secondaryColorCandidate)) {
-                    // If secondary color is invalid, overwrite it with the default secondary color
-                    spawnEggColorsJson.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
-                    LOGGER.warn("Line {}: Invalid secondary color format for '{}' in '{}'. Using fallback secondary color.", lineNumber, currentEntityID, secondaryColorCandidate);
-                } else {
-                    secondaryColor = secondaryColorCandidate;
-                }
+                LOGGER.warn("Line {}: Invalid primary color format for '{}' in '{}'. Using the default value from the data class.", lineNumber, currentEntityID, primaryColor);
             }
 
-            // Set the spawnEggColors property in slimeDataB variable
-            slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
+            // Validate and process the secondary color
+            if (secondaryColor != null && isValidColor(secondaryColor)) {
+                slimeDataB.getSpawnEggColors().setSecondary(secondaryColor);
+            } else {
+                LOGGER.warn("Line {}: Invalid secondary color format for '{}' in '{}'. Using the default value from the data class.", lineNumber, currentEntityID, secondaryColor);
+            }
         } else {
-            // The "spawnEggColors" property exists but is not an object, overwrite it with default values
-            JsonObject defaultSpawnEggColors = new JsonObject();
-            defaultSpawnEggColors.addProperty("primary", FALLBACK_PRIMARY_COLOR);
-            defaultSpawnEggColors.addProperty("secondary", FALLBACK_SECONDARY_COLOR);
-
-            // Set the spawnEggColors property in slimeDataB variable
-            slimeDataB.setSpawnEggColors(new SammieJamSlimeData.SpawnEggColors(primaryColor, secondaryColor));
-            LOGGER.warn("Line {}: 'spawnEggColors' property has an invalid type for '{}'. Using fallback colors.", lineNumber, currentEntityID);
+            LOGGER.warn("Line {}: 'spawnEggColors' property missing or has an invalid type for '{}'. Using the default values from the data class.", lineNumber, currentEntityID);
         }
     }
+
 
     //</editor-fold>
 
@@ -819,7 +771,7 @@ public class JSONFileLoader {
 
 
 
-    // Here we grab all that nicely validated and parsed data and wrap it into a nice package for delivery to SammieJamSlimeData
+
     private static SammieJamSlimeData createSammieJamSlimeData(String currentEntityID, String currentDisplayName, String primaryColor, String secondaryColor, List<SammieJamSlimeData.TransformItem> transformItemsDataList, String listType, List<String> list, boolean spawningEnable) {
         SammieJamSlimeData slimeData = new SammieJamSlimeData();
         slimeData.setEntityID(currentEntityID);

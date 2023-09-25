@@ -1,10 +1,8 @@
 package kombee.sammiejamslimes.data;
 
-import com.google.gson.JsonObject;
 import net.minecraft.nbt.NBTTagCompound;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SammieJamSlimeData {
     private String entityID;
@@ -14,6 +12,16 @@ public class SammieJamSlimeData {
     private Appearance appearance;
     private TransformTo transformTo;
     private boolean spawningEnable;
+
+    public SammieJamSlimeData() {
+        this.entityID = "";
+        this.displayName = "";
+        this.spawnEggColors = new SpawnEggColors("FF0000", "00FF00");
+        this.transformItems = new ArrayList<>();
+        this.appearance = new Appearance("texture");
+        this.transformTo = new TransformTo();
+        this.spawningEnable = true;
+    }
 
     // Constructor to initialize fields
     public SammieJamSlimeData(String entityID, String displayName, SpawnEggColors spawnEggColors,
@@ -28,15 +36,13 @@ public class SammieJamSlimeData {
         this.spawningEnable = spawningEnable;
     }
 
-    public SammieJamSlimeData() {
-        this.entityID = "defaultEntityID";
-        this.displayName = "Default Display Name";
-        this.spawnEggColors = new SpawnEggColors("defaultPrimaryColor", "defaultSecondaryColor");
-    }
-
     // Getters and setters for fields
     public String getEntityID() {
         return entityID;
+    }
+
+    public void setEntityID(String entityID) {
+        this.entityID = entityID;
     }
 
     public String getDisplayName() {
@@ -101,10 +107,19 @@ public class SammieJamSlimeData {
             return primary;
         }
 
+        public void setPrimary(String primary) {
+            this.primary = primary;
+        }
+
         public String getSecondary() {
             return secondary;
         }
+
+        public void setSecondary(String secondary) {
+            this.secondary = secondary;
+        }
     }
+
 
     public static class TransformItem {
         private String itemID;
@@ -112,6 +127,14 @@ public class SammieJamSlimeData {
         private boolean consumeItem;
         private boolean reduceDurability;
         private NBTTagCompound nbtData;
+
+        public TransformItem() {
+            this.itemID = ""; // Default itemID as an empty string
+            this.metadata = 0; // Default metadata as 0. This is how Minecraft does it
+            this.consumeItem = true; // Default consumeItem as true. Consider changing later
+            this.reduceDurability = false; // Default reduceDurability as false, to account for items without durability
+            this.nbtData = null; // Default nbtData as null
+        }
 
         public TransformItem(String itemID, int metadata, boolean consumeItem,
                              boolean reduceDurability, NBTTagCompound nbtData) {
@@ -145,14 +168,30 @@ public class SammieJamSlimeData {
 
     public static class Appearance {
         private String type;
-        private Map<String, Object> source;
+        private Object source; // Object type allows for different data types
+
+        public Appearance(String type) {
+            this.type = type;
+            this.source = getDefaultSourceForType(type);
+        }
 
         public String getType() {
             return type;
         }
 
-        public Map<String, Object> getSource() {
+        public Object getSource() {
             return source;
+        }
+
+        // Helper method to set the default source based on the type
+        private Object getDefaultSourceForType(String type) {
+            if ("texture".equals(type)) {
+                return "minecraft:slime"; // Default texture path
+            } else if ("color".equals(type)) {
+                return Arrays.asList(0, 0, 0, 0); // Default color [0, 0, 0, 0]
+            } else {
+                return null; // Handle other cases if needed
+            }
         }
     }
 
@@ -174,6 +213,11 @@ public class SammieJamSlimeData {
 
         public void setList(List<String> list) {
             this.list = list;
+        }
+
+        public TransformTo() {
+            this.listType = "blacklist";
+            this.list = new ArrayList<>();
         }
     }
 }
