@@ -1,5 +1,8 @@
 package kombee.sammiejamslimes;
 
+import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.registry.EntityEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -39,4 +42,7 @@ public class SammieJamSlimes {
         LOGGER.info("Post-Initialization phase started.");
         proxy.postInit();
     }
+
+    @Mod.Instance
+    public static SammieJamSlimes instance;
 }

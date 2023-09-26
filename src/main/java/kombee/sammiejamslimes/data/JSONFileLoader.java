@@ -24,11 +24,9 @@ public class JSONFileLoader {
     private static final JsonParser jsonParser = new JsonParser();
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
     private static List<SammieJamSlimeData> slimeDataList = new ArrayList<>();
-    private static final String FALLBACK_PRIMARY_COLOR = "FF0000";
-    private static final String FALLBACK_SECONDARY_COLOR = "00FF00";
-    private static final Boolean FALLBACK_CONSUME_ITEM = true;
-    private static final Boolean FALLBACK_REDUCE_DURABILITY = false;
-    private static final ResourceLocation DEFAULT_SLIME_TEXTURE = new ResourceLocation("minecraft", "textures/entity/slime/slime.png");
+    public static List<SammieJamSlimeData> getSlimeDataList() {
+        return new ArrayList<>(slimeDataList);
+    }
 
     // SoC: Parsing and validating slimes.json before storing in SammieJamSlimeData
     // Here we perform a grand manner of validation checks on slimes.json.

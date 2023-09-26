@@ -12,6 +12,8 @@ public class SammieJamSlimeData {
     private Appearance appearance;
     private TransformTo transformTo;
     private boolean spawningEnable;
+    private int dimension;
+
 
     public SammieJamSlimeData() {
         this.entityID = "";
@@ -92,6 +94,11 @@ public class SammieJamSlimeData {
     public void setSpawningEnable(boolean spawningEnable) {
         this.spawningEnable = spawningEnable;
     }
+
+    public int getDimension() {
+        return dimension;
+    }
+
 
     // Nested classes remain the same
     public static class SpawnEggColors {
