@@ -13,6 +13,9 @@ public class SammieJamSlimeData {
     private TransformTo transformTo;
     private boolean spawningEnable;
     private int dimension;
+    private int spawnWeight;
+    private int minGroupSize;
+    private int maxGroupSize;
 
 
     public SammieJamSlimeData() {
@@ -23,6 +26,9 @@ public class SammieJamSlimeData {
         this.appearance = new Appearance("texture");
         this.transformTo = new TransformTo();
         this.spawningEnable = true;
+        this.spawnWeight = 10;
+        this.minGroupSize = 1;
+        this.maxGroupSize = 1;
     }
 
     // Constructor to initialize fields
@@ -97,6 +103,18 @@ public class SammieJamSlimeData {
 
     public int getDimension() {
         return dimension;
+    }
+
+    public int getSpawnWeight() {
+        return spawnWeight;
+    }
+
+    public int getMinGroupSize() {
+        return minGroupSize;
+    }
+
+    public int getMaxGroupSize() {
+        return maxGroupSize;
     }
 
 

@@ -23,10 +23,7 @@ public class JSONFileLoader {
     private static final Gson gson = new Gson();
     private static final JsonParser jsonParser = new JsonParser();
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
-    private static List<SammieJamSlimeData> slimeDataList = new ArrayList<>();
-    public static List<SammieJamSlimeData> getSlimeDataList() {
-        return new ArrayList<>(slimeDataList);
-    }
+    private static final List<SammieJamSlimeData> slimeDataList = new ArrayList<>();
 
     // SoC: Parsing and validating slimes.json before storing in SammieJamSlimeData
     // Here we perform a grand manner of validation checks on slimes.json.
@@ -185,8 +182,6 @@ public class JSONFileLoader {
         }
         return null; // Entity ID not found in the JSON array
     }
-    //</editor-fold>
-
 
 
     // HANDLERS //
