@@ -1,6 +1,7 @@
 package kombee.sammiejamslimes.entities;
 
 import kombee.sammiejamslimes.SammieJamSlimes;
+import kombee.sammiejamslimes.data.SammieJamSlimeData;
 import net.minecraft.entity.monster.EntitySlime;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
@@ -17,6 +18,11 @@ public class EntityJamSlimeBase extends EntitySlime implements IMob {
     public EntityJamSlimeBase(World worldIn) {
         super(worldIn);
         this.dataManager.register(SLIME_ENTITY_ID, "");
+    }
+
+    public SammieJamSlimeData getSammieJamSlimeData() {
+        Class<? extends EntityJamSlimeBase> entityClass = this.getClass();
+        return SlimeEntityRegistry.getEntityDataForClass(entityClass);
     }
 
     @Override

@@ -18,7 +18,9 @@ import net.minecraftforge.fml.common.registry.EntityRegistry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SlimeEntityRegistry {
 
@@ -26,6 +28,7 @@ public class SlimeEntityRegistry {
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
     private static int entityCounter = 0;
 
+    private static Map<Class<? extends EntityJamSlimeBase>, SammieJamSlimeData> entityDataMap = new HashMap<>();
     public static void registerEntities() {
         List<SammieJamSlimeData> slimeDataList = DataManager.getSlimeDataList();
 
@@ -35,20 +38,30 @@ public class SlimeEntityRegistry {
             int trackingRange = 80;
             int updateFrequency = 3;
             boolean sendsVelocityUpdates = true;
-            int eggPrimaryColor = 0x00FF00;
-            int eggSecondaryColor = 0xFF0000;
+            int eggPrimaryColor = getColorFromHexString(slimeData.getSpawnEggColors().getPrimary());
+            int eggSecondaryColor = getColorFromHexString(slimeData.getSpawnEggColors().getSecondary());
 
             Class<? extends EntityJamSlimeBase> entityClass = getEntityClassForCounter(entityCounter);
 
+            entityDataMap.put(entityClass, slimeData);
 
             registerEntity(entityClass, entityID, fullName, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
 
             entityCounter++;
 
             Biome[] spawnBiomes = getBiomes();
-            EntityRegistry.addSpawn(entityClass, 10, 1, 3, EnumCreatureType.MONSTER, spawnBiomes);
+            EntityRegistry.addSpawn(entityClass, 1000, 1, 3, EnumCreatureType.MONSTER, spawnBiomes);
         }
     }
+
+    private static int getColorFromHexString(String hexColor) {
+        return Integer.parseInt(hexColor, 16);
+    }
+
+    public static SammieJamSlimeData getEntityDataForClass(Class<? extends EntityJamSlimeBase> entityClass) {
+        return entityDataMap.get(entityClass);
+    }
+
 
     private static Class<? extends EntityJamSlimeBase> getEntityClassForCounter(int counter) {
         // Reflection against jamslimes subclasses
