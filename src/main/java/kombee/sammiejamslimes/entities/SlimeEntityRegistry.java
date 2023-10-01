@@ -10,10 +10,6 @@ import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime4;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
-import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.event.entity.EntityJoinWorldEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,7 +41,7 @@ public class SlimeEntityRegistry {
 
             entityDataMap.put(entityClass, slimeData);
 
-            registerEntity(entityClass, entityID, fullName, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
+            registerEntity(entityClass, entityID, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
 
             entityCounter++;
 
@@ -62,26 +58,23 @@ public class SlimeEntityRegistry {
         return entityDataMap.get(entityClass);
     }
 
+    private static Class<? extends EntityJamSlimeBase>[] entityClasses = new Class[]{
+            EntityJamSlime1.class,
+            EntityJamSlime2.class,
+            EntityJamSlime3.class,
+            EntityJamSlime4.class
+    };
 
     private static Class<? extends EntityJamSlimeBase> getEntityClassForCounter(int counter) {
-        // Reflection against jamslimes subclasses
-        switch (counter) {
-            case 0:
-                return EntityJamSlime1.class;
-            case 1:
-                return EntityJamSlime2.class;
-            case 2:
-                return EntityJamSlime3.class;
-            case 3:
-                return EntityJamSlime4.class;
-            default:
-                return EntityJamSlime1.class;
+        if (counter >= 0 && counter < entityClasses.length) {
+            return entityClasses[counter];
+        } else {
+            return EntityJamSlime1.class; // Default to EntityJamSlime1 if counter is out of bounds
         }
     }
 
-
-    private static void registerEntity(Class<? extends EntityJamSlimeBase> entityClass, String entityID, String fullName, int trackingRange, int updateFrequency, boolean sendsVelocityUpdates, int eggPrimaryColor, int eggSecondaryColor) {
-        EntityRegistry.registerModEntity(new ResourceLocation(fullName), entityClass, entityID, entityId++, SammieJamSlimes.instance, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
+    private static void registerEntity(Class<? extends EntityJamSlimeBase> entityClass, String entityID, int trackingRange, int updateFrequency, boolean sendsVelocityUpdates, int eggPrimaryColor, int eggSecondaryColor) {
+        EntityRegistry.registerModEntity(new ResourceLocation(SammieJamSlimes.MODID, entityID), entityClass, entityID, entityId++, SammieJamSlimes.instance, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
     }
 
     private static Biome[] getBiomes() {
@@ -95,14 +88,6 @@ public class SlimeEntityRegistry {
         }
 
         return biomes;
-    }
-
-    @SubscribeEvent
-    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
-    }
-
-    @SubscribeEvent
-    public void onEntityRegister(RegistryEvent.Register<EntityEntry> event) {
     }
 }
 

@@ -8,6 +8,7 @@ public class EntityJamSlime1 extends EntityJamSlimeBase {
     public EntityJamSlime1(World worldIn) {
         super(worldIn);
     }
+
     @Override
     public boolean getCanSpawnHere() {
         SammieJamSlimeData slimeData = getSammieJamSlimeData();
