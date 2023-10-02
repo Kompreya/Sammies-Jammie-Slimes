@@ -1,5 +1,6 @@
 package kombee.sammiejamslimes;
 
+import kombee.sammiejamslimes.entities.SlimeEntityRegistry;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 
 public class ClientProxy extends CommonProxy {
@@ -12,7 +13,8 @@ public class ClientProxy extends CommonProxy {
 
     @Override
     public void init() {
-        super.init(); // Call the parent class's method if needed
+        super.init();
+        SlimeEntityRegistry.registerEntityRenderers();// Call the parent class's method if needed
 
         // Code that should only run on the client side during initialization
     }

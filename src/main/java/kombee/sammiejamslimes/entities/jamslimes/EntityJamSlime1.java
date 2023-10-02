@@ -15,3 +15,5 @@ public class EntityJamSlime1 extends EntityJamSlimeBase {
         return slimeData != null && slimeData.isSpawningEnable() && super.getCanSpawnHere();
     }
 }
+
+

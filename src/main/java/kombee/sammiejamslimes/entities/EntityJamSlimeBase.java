@@ -2,22 +2,28 @@ package kombee.sammiejamslimes.entities;
 
 import kombee.sammiejamslimes.SammieJamSlimes;
 import kombee.sammiejamslimes.data.SammieJamSlimeData;
+import net.minecraft.entity.IEntityLivingData;
+import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.monster.EntitySlime;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.World;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import net.minecraft.entity.monster.IMob;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Constructor;
 
 
 public class EntityJamSlimeBase extends EntitySlime implements IMob {
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
     private static final DataParameter<String> SLIME_ENTITY_ID = EntityDataManager.createKey(EntityJamSlimeBase.class, DataSerializers.STRING);
-    private boolean hasSplit = false;
+    private boolean hasSplit = false; // Add this field to store the initial size
 
     public EntityJamSlimeBase(World worldIn) {
         super(worldIn);
@@ -56,7 +62,7 @@ public class EntityJamSlimeBase extends EntitySlime implements IMob {
                     newSlime.copyLocationAndAnglesFrom(this);
                     newSlime.setSlimeSize(size / 2, true);
 
-                    // Ensure that only instances of custom slime class are spawned
+                    // Ensure that only instances of the custom slime class are spawned
                     if (newSlime instanceof EntityJamSlimeBase) {
                         this.world.spawnEntity(newSlime);
                     }

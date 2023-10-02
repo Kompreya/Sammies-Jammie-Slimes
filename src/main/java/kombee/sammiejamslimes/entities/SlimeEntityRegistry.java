@@ -7,10 +7,16 @@ import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime1;
 import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime2;
 import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime3;
 import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime4;
+import kombee.sammiejamslimes.render.RenderJamSlime;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
+import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -76,6 +82,38 @@ public class SlimeEntityRegistry {
     private static void registerEntity(Class<? extends EntityJamSlimeBase> entityClass, String entityID, int trackingRange, int updateFrequency, boolean sendsVelocityUpdates, int eggPrimaryColor, int eggSecondaryColor) {
         EntityRegistry.registerModEntity(new ResourceLocation(SammieJamSlimes.MODID, entityID), entityClass, entityID, entityId++, SammieJamSlimes.instance, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
     }
+
+    @SideOnly(Side.CLIENT)
+    public static void registerEntityRenderers() {
+        List<SammieJamSlimeData> slimeDataList = DataManager.getSlimeDataList();
+        RenderManager renderManager = Minecraft.getMinecraft().getRenderManager();
+
+        for (SammieJamSlimeData slimeData : slimeDataList) {
+            Class<? extends EntityJamSlimeBase> entityClass = getEntityClassForRegistrationOrder(slimeDataList.indexOf(slimeData));
+            String appearanceType = slimeData.getAppearance().getType();
+            Object appearanceSource = slimeData.getAppearance().getSource();
+
+            RenderJamSlime customRenderer = new RenderJamSlime(renderManager, slimeData, appearanceType, appearanceSource);
+            RenderingRegistry.registerEntityRenderingHandler(entityClass, customRenderer);
+        }
+    }
+
+    private static Class<? extends EntityJamSlimeBase> getEntityClassForRegistrationOrder(int registrationOrder) {
+        Class<? extends EntityJamSlimeBase>[] entityClasses = new Class[]{
+                EntityJamSlime1.class,
+                EntityJamSlime2.class,
+                EntityJamSlime3.class,
+                EntityJamSlime4.class
+        };
+
+        if (registrationOrder >= 0 && registrationOrder < entityClasses.length) {
+            return entityClasses[registrationOrder];
+        } else {
+            return EntityJamSlime1.class; // Default to EntityJamSlime1 if out of bounds
+        }
+    }
+
+
 
     private static Biome[] getBiomes() {
         // This just gets ALL biomes for now. Might configure differently later.
