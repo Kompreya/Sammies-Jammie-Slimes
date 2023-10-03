@@ -24,7 +24,7 @@ public class RenderJamSlime extends RenderLiving<EntityJamSlimeBase> {
     @Override
     protected void preRenderCallback(EntityJamSlimeBase entity, float partialTickTime) {
         // Calculate the scale based on the slime's size
-        float sizeScale = 0.6F * entity.getSlimeSize(); // Adjust the multiplier as needed
+        float sizeScale = 1F * entity.getSlimeSize(); // Adjust the multiplier as needed
 
         GlStateManager.scale(sizeScale, sizeScale, sizeScale);
 
