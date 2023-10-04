@@ -7,12 +7,15 @@ import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime1;
 import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime2;
 import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime3;
 import kombee.sammiejamslimes.entities.jamslimes.EntityJamSlime4;
-import kombee.sammiejamslimes.render.RenderJamSlime;
+import kombee.sammiejamslimes.render.ColorRender;
+import kombee.sammiejamslimes.render.TextureRender;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.RenderLiving;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
+import net.minecraftforge.fml.client.registry.IRenderFactory;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
 import net.minecraftforge.fml.relauncher.Side;
@@ -93,10 +96,22 @@ public class SlimeEntityRegistry {
             String appearanceType = slimeData.getAppearance().getType();
             Object appearanceSource = slimeData.getAppearance().getSource();
 
-            RenderJamSlime customRenderer = new RenderJamSlime(renderManager, slimeData, appearanceType, appearanceSource);
-            RenderingRegistry.registerEntityRenderingHandler(entityClass, customRenderer);
+            RenderLiving<EntityJamSlimeBase> customRenderer = null;
+
+            if ("texture".equals(appearanceType)) {
+                customRenderer = new TextureRender(renderManager, slimeData, appearanceType, appearanceSource);
+            } else if ("color".equals(appearanceType)) {
+                customRenderer = new ColorRender(renderManager, slimeData, appearanceType, appearanceSource);
+            } else {
+                // Handle the default case if needed
+            }
+
+            if (customRenderer != null) {
+                renderManager.entityRenderMap.put(entityClass, customRenderer);
+            }
         }
     }
+
 
     private static Class<? extends EntityJamSlimeBase> getEntityClassForRegistrationOrder(int registrationOrder) {
         Class<? extends EntityJamSlimeBase>[] entityClasses = new Class[]{
