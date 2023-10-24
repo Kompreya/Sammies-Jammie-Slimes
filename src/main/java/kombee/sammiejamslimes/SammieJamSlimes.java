@@ -12,6 +12,8 @@ import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.SidedProxy;
 
+import java.io.File;
+
 @Mod(modid = SammieJamSlimes.MODID, version = SammieJamSlimes.VERSION)
 public class SammieJamSlimes {
 
@@ -24,16 +26,19 @@ public class SammieJamSlimes {
     @SidedProxy(clientSide = ProxyClientClass, serverSide = ProxyServerClass)
     public static CommonProxy proxy;
 
+    private File modConfigurationDir;
+
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         LOGGER.info("Pre-Initialization phase started.");
+        modConfigurationDir = event.getModConfigurationDirectory();
         proxy.preInit(event);
     }
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
         LOGGER.info("Initialization phase started.");
-        proxy.init();
+        proxy.init(event);
     }
 
     @EventHandler

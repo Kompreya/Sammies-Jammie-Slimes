@@ -21,9 +21,9 @@ public class LocalizationHandler {
         File langFile = new File(langDir, "en_us.lang");
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(langFile))) {
-            for (SammieJamSlimeData slimeData : slimeDataList) {
-                String entityID = slimeData.getEntityID();
-                String displayName = slimeData.getDisplayName();
+            for (int entityCounter = 1; entityCounter <= slimeDataList.size(); entityCounter++) {
+                String entityID = "slime" + entityCounter;
+                String displayName = slimeDataList.get(entityCounter - 1).getDisplayName();
 
                 // Write unlocalized name
                 writer.write("entity." + entityID + ".name=" + displayName);
@@ -34,4 +34,5 @@ public class LocalizationHandler {
         }
     }
 }
+
 
