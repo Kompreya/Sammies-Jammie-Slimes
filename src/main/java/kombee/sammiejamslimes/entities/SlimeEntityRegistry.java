@@ -50,7 +50,7 @@ public class SlimeEntityRegistry {
             registerEntity(entityClass, entityID, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
 
             Biome[] spawnBiomes = getBiomes();
-            EntityRegistry.addSpawn(entityClass, 1000, 1, 3, EnumCreatureType.MONSTER, spawnBiomes);
+            EntityRegistry.addSpawn(entityClass, 1000, 1, 3, EnumCreatureType.MONSTER, spawnBiomes); //TODO: Change weightedProb back to vanilla value!! It's 1000 for testing
         }
     }
 

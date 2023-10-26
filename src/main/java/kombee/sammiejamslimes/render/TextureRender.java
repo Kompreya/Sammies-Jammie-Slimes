@@ -14,7 +14,7 @@ public class TextureRender extends RenderLiving<EntityJamSlimeBase> {
     public TextureRender(RenderManager renderManagerIn, String textureFilename) {
         super(renderManagerIn, new ModelSlime(16), 0.25F);
         this.textureFilename = textureFilename;
-        this.addLayer(new JamSlimeLayer(this));
+        this.addLayer(new JamSlimeLayerTexture(this));
     }
 
     @Override
