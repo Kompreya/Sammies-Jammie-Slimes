@@ -55,12 +55,11 @@ public class SlimeEntityRegistry {
             registerEntity(entityClass, entityID, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
 
             for (SammieJamSlimeData.TransformItem transformItem : slimeDataList.get(entityCounter - 1).getTransformItems()) {
-                // Populate the itemToEntityMap
                 itemToEntityMap.put(transformItem.getItemID(), entityClass);
             }
 
             Biome[] spawnBiomes = getBiomes();
-            EntityRegistry.addSpawn(entityClass, 1000, 1, 3, EnumCreatureType.MONSTER, spawnBiomes); //TODO: Change weightedProb back to vanilla value!! It's 1000 for testing
+            EntityRegistry.addSpawn(entityClass, 100, 1, 3, EnumCreatureType.MONSTER, spawnBiomes); //TODO: Change weightedProb back to vanilla value!! It's 1000 for testing
         }
     }
 
@@ -85,11 +84,11 @@ public class SlimeEntityRegistry {
     };
 
     private static Class<? extends EntityJamSlimeBase> getEntityClassForCounter(int counter) {
-        int adjustedCounter = counter - 1; // Adjust the counter to be zero-based
+        int adjustedCounter = counter - 1;
         if (adjustedCounter >= 0 && adjustedCounter < entityClasses.length) {
             return entityClasses[adjustedCounter];
         } else {
-            return EntityJamSlime1.class; // Default to EntityJamSlime1 if counter is out of bounds
+            return EntityJamSlime1.class;
         }
     }
 
@@ -110,7 +109,7 @@ public class SlimeEntityRegistry {
         entityTextureMap.put(EntityJamSlime4.class, "slime4.png");
 
         for (int entityCounter = 0; entityCounter < entityClasses.length; entityCounter++) {
-            String entityID = "slime" + (entityCounter + 1); // Use the same naming convention
+            String entityID = "slime" + (entityCounter + 1);
             SammieJamSlimeData slimeData = getEntityDataForClass(entityClasses[entityCounter]);
 
             if (slimeData != null) {

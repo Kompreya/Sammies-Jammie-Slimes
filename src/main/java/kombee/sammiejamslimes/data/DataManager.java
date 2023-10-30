@@ -13,19 +13,17 @@ public class DataManager {
     private static List<SammieJamSlimeData> slimeDataList = new ArrayList<>();
 
     public static void loadSlimeData() {
-        // Use the static slimeDataList from JSONFileLoader
         SammieJamSlimeData[] slimeDataArray = JSONFileLoader.loadSlimeData("config/sammiejamslimes/slimes.json", true);
 
         if (slimeDataArray != null) {
             LOGGER.info("Loaded SammieJamSlime data:");
 
-            // Clear existing data in the list and add the loaded data
             slimeDataList.clear();
             slimeDataList.addAll(Arrays.asList(slimeDataArray));
 
             for (SammieJamSlimeData slimeData : slimeDataList) {
-                LOGGER.info("Entity ID: {}", slimeData.getEntityID());
-                LOGGER.info("Display Name: {}", slimeData.getDisplayName());
+                //LOGGER.info("Entity ID: {}", slimeData.getEntityID());
+                //LOGGER.info("Display Name: {}", slimeData.getDisplayName());
                 // Add more logging as needed for data inspection. Can probably remove this closer to release.
             }
         } else {

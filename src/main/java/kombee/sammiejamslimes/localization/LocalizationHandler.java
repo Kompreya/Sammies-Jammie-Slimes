@@ -25,7 +25,6 @@ public class LocalizationHandler {
                 String entityID = "slime" + entityCounter;
                 String displayName = slimeDataList.get(entityCounter - 1).getDisplayName();
 
-                // Write unlocalized name
                 writer.write("entity." + entityID + ".name=" + displayName);
                 writer.newLine();
             }

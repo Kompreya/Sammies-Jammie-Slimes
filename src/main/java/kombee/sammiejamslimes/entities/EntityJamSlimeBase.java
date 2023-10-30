@@ -53,7 +53,6 @@ public class EntityJamSlimeBase extends EntitySlime implements IMob {
         ItemStack heldItem = player.getHeldItem(hand);
 
         if (!world.isRemote) {
-            // Pass the current health to the transformSlime method
             SlimeTransformHandler.transformSlime(this, heldItem, this.getSlimeSize(), this.getHealth());
         }
 

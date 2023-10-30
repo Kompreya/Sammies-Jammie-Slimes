@@ -206,7 +206,7 @@ public class SammieJamSlimeData {
 
     public static class Appearance {
         private String type;
-        private Object source; // Object type allows for different data types
+        private Object source;
 
         public Appearance(String type) {
             this.type = type;
@@ -229,14 +229,13 @@ public class SammieJamSlimeData {
             this.source = source;
         }
 
-        // Helper method to set the default source based on the type
         public Object getDefaultSourceForType(String type) {
             if ("texture".equals(type)) {
-                return "minecraft:slime"; // Default texture path
+                return "minecraft:slime";
             } else if ("color".equals(type)) {
-                return Arrays.asList(0, 0, 0, 0); // Default color [0, 0, 0, 0]
+                return Arrays.asList(0, 0, 0, 0);
             } else {
-                return null; // Handle other cases if needed
+                return null;
             }
         }
     }
