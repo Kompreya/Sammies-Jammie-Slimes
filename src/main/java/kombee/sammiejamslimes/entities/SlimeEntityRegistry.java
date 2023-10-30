@@ -31,6 +31,11 @@ public class SlimeEntityRegistry {
     private static final Logger LOGGER = LogManager.getLogger(SammieJamSlimes.MODID);
 
     private static Map<Class<? extends EntityJamSlimeBase>, SammieJamSlimeData> entityDataMap = new HashMap<>();
+
+    private static Map<String, Class<? extends EntityJamSlimeBase>> itemToEntityMap = new HashMap<>();
+    public static Map<Class<? extends EntityJamSlimeBase>, SammieJamSlimeData> getAllEntityData() {
+        return entityDataMap;
+    }
     public static void registerEntities() {
         List<SammieJamSlimeData> slimeDataList = DataManager.getSlimeDataList();
 
@@ -49,9 +54,18 @@ public class SlimeEntityRegistry {
 
             registerEntity(entityClass, entityID, trackingRange, updateFrequency, sendsVelocityUpdates, eggPrimaryColor, eggSecondaryColor);
 
+            for (SammieJamSlimeData.TransformItem transformItem : slimeDataList.get(entityCounter - 1).getTransformItems()) {
+                // Populate the itemToEntityMap
+                itemToEntityMap.put(transformItem.getItemID(), entityClass);
+            }
+
             Biome[] spawnBiomes = getBiomes();
             EntityRegistry.addSpawn(entityClass, 1000, 1, 3, EnumCreatureType.MONSTER, spawnBiomes); //TODO: Change weightedProb back to vanilla value!! It's 1000 for testing
         }
+    }
+
+    public static Class<? extends EntityJamSlimeBase> getTargetEntityClassForItem(String itemID) {
+        return itemToEntityMap.get(itemID);
     }
 
 
@@ -63,7 +77,7 @@ public class SlimeEntityRegistry {
         return entityDataMap.get(entityClass);
     }
 
-    private static Class<? extends EntityJamSlimeBase>[] entityClasses = new Class[]{
+    public static Class<? extends EntityJamSlimeBase>[] entityClasses = new Class[]{
             EntityJamSlime1.class,
             EntityJamSlime2.class,
             EntityJamSlime3.class,

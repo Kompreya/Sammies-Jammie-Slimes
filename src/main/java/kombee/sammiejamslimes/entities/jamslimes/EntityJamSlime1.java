@@ -5,8 +5,13 @@ import kombee.sammiejamslimes.entities.EntityJamSlimeBase;
 import net.minecraft.world.World;
 
 public class EntityJamSlime1 extends EntityJamSlimeBase {
+
     public EntityJamSlime1(World worldIn) {
         super(worldIn);
+    }
+
+    public EntityJamSlime1(World worldIn, int slimeSize) {
+        super(worldIn, slimeSize);
     }
 
     @Override
@@ -14,6 +19,7 @@ public class EntityJamSlime1 extends EntityJamSlimeBase {
         SammieJamSlimeData slimeData = getSammieJamSlimeData();
         return slimeData != null && slimeData.isSpawningEnable() && super.getCanSpawnHere();
     }
+
 }
 
 

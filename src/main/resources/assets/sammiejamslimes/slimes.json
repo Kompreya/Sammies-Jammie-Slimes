@@ -1,6 +1,6 @@
 [
     {
-        "entityID": "jamslime",
+        "entityID": "slime1",
         "displayName": "Jam Slime",
         "spawnEggColors": {
           "primary": "F2F2F2",
@@ -13,7 +13,7 @@
         "spawningEnable":true
     },
     {
-        "entityID": "appleslime",
+        "entityID": "slime2",
         "displayName": "Apple Slime",
         "spawnEggColors": {
           "primary": "A60303",
@@ -42,7 +42,7 @@
         "spawningEnable":true
     },
     {
-        "entityID": "melonslime",
+        "entityID": "slime3",
         "displayName": "Melon Slime",
         "spawnEggColors": {
           "primary": "BF3123",
@@ -62,7 +62,7 @@
           ],
         "appearance": {
             "type": "texture",
-            "source": "config/sammiejamslimes/textures/melonslime.png"
+            "source": ""
         },
         "transformTo": {
           "listType": "blacklist",
@@ -71,7 +71,7 @@
         "spawningEnable": false
     },
     {
-        "entityID": "diamondslime",
+        "entityID": "slime4",
         "displayName": "Diamond Slime",
         "spawnEggColors": {
           "primary": "20C5B5",
@@ -91,7 +91,7 @@
           ],
         "appearance": {
             "type": "texture",
-            "source": "config/sammiejamslimes/textures/diamondslime.png"
+            "source": ""
         },
         "spawningEnable":true
     }

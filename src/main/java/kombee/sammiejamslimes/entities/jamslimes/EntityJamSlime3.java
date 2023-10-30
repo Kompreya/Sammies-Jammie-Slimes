@@ -9,9 +9,17 @@ public class EntityJamSlime3 extends EntityJamSlimeBase {
         super(worldIn);
     }
 
+    public EntityJamSlime3(World worldIn, int slimeSize) {
+        super(worldIn, slimeSize);
+    }
+
+
+
+
     @Override
     public boolean getCanSpawnHere() {
         SammieJamSlimeData slimeData = getSammieJamSlimeData();
         return slimeData != null && slimeData.isSpawningEnable() && super.getCanSpawnHere();
     }
+
 }

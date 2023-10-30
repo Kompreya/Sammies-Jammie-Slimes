@@ -147,11 +147,14 @@ public class SammieJamSlimeData {
 
 
     public static class TransformItem {
+        public String getItemID;
         private String itemID;
         private int metadata;
         private boolean consumeItem;
         private boolean reduceDurability;
         private NBTTagCompound nbtData;
+        private String transformToEntityID;
+        private int index;
 
         public TransformItem() {
             this.itemID = ""; // Default itemID as an empty string
@@ -188,6 +191,16 @@ public class SammieJamSlimeData {
 
         public NBTTagCompound getNbtData() {
             return nbtData;
+        }
+        public String getTransformToEntityID() {
+            return transformToEntityID;
+        }
+        public int getIndex() {
+            return index;
+        }
+
+        public void setIndex(int index) {
+            this.index = index;
         }
     }
 
